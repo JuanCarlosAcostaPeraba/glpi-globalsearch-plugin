@@ -1,5 +1,10 @@
 # Global Search Enhancer for GLPI
 
+[![GLPI](https://img.shields.io/badge/GLPI-10.x-blue.svg)](https://glpi-project.org)
+[![License: GPLv3+](https://img.shields.io/badge/License-GPLv3+-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
+![Status](https://img.shields.io/badge/Status-Stable-brightgreen.svg)
+![Maintained](https://img.shields.io/badge/Maintained-yes-success.svg)
+
 A custom global search engine plugin for [GLPI](https://glpi-project.org/) that replaces the default search functionality with an enhanced search experience.
 
 ## Description
