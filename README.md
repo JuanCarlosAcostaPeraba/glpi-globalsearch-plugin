@@ -1,6 +1,6 @@
 # Global Search Enhancer
 
-[![Version](https://img.shields.io/badge/Version-1.3.0-green.svg)](https://github.com/JuanCarlosAcostaPeraba/kanbanlooksgood/releases)
+[![Version](https://img.shields.io/badge/Version-1.5.0-green.svg)](https://github.com/JuanCarlosAcostaPeraba/glpi-globalsearch-plugin/releases)
 [![GLPI Marketplace](https://img.shields.io/badge/GLPI_Marketplace-Submited-orange.svg)](https://plugins.glpi-project.org/#/author/146)
 [![GLPI](https://img.shields.io/badge/GLPI-10.0.x-blue.svg)](https://glpi-project.org)
 [![License: GPLv3+](https://img.shields.io/badge/License-GPLv3+-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
@@ -21,9 +21,11 @@ A lightweight GLPI plugin that enhances the **Global Search** by replacing the d
   * Users
   * Ticket Tasks
   * Project Tasks
-* 🔹 Smart ID search for numeric queries
+* 🔹 Smart ID search for numeric queries (also searches in content)
+* 🔹 Enhanced numeric search - finds numbers within text content
 * 🔹 Entity-aware with permission checking
 * 🔹 Results ranked by modification date
+* 🔹 Assigned technician column in ticket results
 
 ## 📦 Requirements
 
@@ -62,7 +64,7 @@ Available options:
 ### Search
 
 * Uses multi-word "Google-style" search - all words must appear in results
-* Numeric queries search by ID directly
+* Smart numeric search - numeric queries search both by ID and within content (e.g., "5457" finds items with ID 5457 AND items containing "5457" in their content like "5457T")
 * Searches in closed/resolved items
 * Results sorted by modification date
 

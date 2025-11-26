@@ -4,7 +4,7 @@ if (!defined('GLPI_ROOT')) {
     die('Direct access not allowed');
 }
 
-define('GLOBALSEARCH_VERSION', '1.4.1');
+define('GLOBALSEARCH_VERSION', '1.5.0');
 
 /**
  * Inicialización del plugin (GLPI la ejecuta al cargar el plugin)

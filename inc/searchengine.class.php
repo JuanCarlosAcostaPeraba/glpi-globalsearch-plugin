@@ -458,46 +458,38 @@ class PluginGlobalsearchSearchEngine
     {
         global $DB;
 
-        if (mb_strlen($this->raw_query) < 3 && !is_numeric($this->raw_query)) return [];
+        if (mb_strlen($this->raw_query) < 1) return [];
         if (!TicketTask::canView()) return [];
 
-        // Si es numérico, buscamos por ID de tarea o ID de ticket
+        // Campos donde buscar
+        $search_fields = ['glpi_tickettasks.content'];
+
+        // Construir criterio de búsqueda en contenido
+        $content_criteria = $this->getMultiWordCriteria($search_fields);
+
+        // Si es numérico, también buscamos por ID de tarea o ID de ticket
         if (is_numeric($this->raw_query)) {
-            $criteria = [
-                'SELECT' => [
-                    'glpi_tickettasks.id',
-                    'glpi_tickettasks.tickets_id',
-                    'glpi_tickettasks.content',
-                    'glpi_tickettasks.date',
-                    'glpi_tickettasks.users_id',
-                    'glpi_tickettasks.date_mod',
-                    'glpi_tickets.name AS ticket_name',
-                    'glpi_tickets.entities_id'
-                ],
-                'FROM'   => 'glpi_tickettasks',
-                'INNER JOIN' => [
-                    'glpi_tickets' => ['ON' => ['glpi_tickettasks' => 'tickets_id', 'glpi_tickets' => 'id']]
-                ],
-                'WHERE' => [
-                    'OR' => [
-                        'glpi_tickettasks.id' => $this->raw_query,
-                        'glpi_tickettasks.tickets_id' => $this->raw_query
-                    ]
+            $id_criteria = [
+                'OR' => [
+                    'glpi_tickettasks.id' => $this->raw_query,
+                    'glpi_tickettasks.tickets_id' => $this->raw_query
                 ]
             ];
-            if (!empty($this->allowed_entities)) {
-                $criteria['WHERE']['glpi_tickets.entities_id'] = $this->allowed_entities;
-            }
-            $iterator = $DB->request($criteria);
-            $results = [];
-            foreach ($iterator as $row) {
-                $results[] = $row;
-            }
-            return $results;
-        }
 
-        // Campos con alias de tabla
-        $search_fields = ['glpi_tickettasks.content'];
+            // Combinar búsqueda en contenido Y búsqueda por ID con OR
+            if (!empty($content_criteria)) {
+                $where_criteria = [
+                    'OR' => [
+                        $content_criteria,
+                        $id_criteria
+                    ]
+                ];
+            } else {
+                $where_criteria = $id_criteria;
+            }
+        } else {
+            $where_criteria = $content_criteria;
+        }
 
         $criteria = [
             'SELECT' => [
@@ -519,7 +511,7 @@ class PluginGlobalsearchSearchEngine
                     ]
                 ]
             ],
-            'WHERE'  => $this->getMultiWordCriteria($search_fields),
+            'WHERE'  => $where_criteria,
             'ORDER'  => 'glpi_tickettasks.date_mod DESC',
             'LIMIT'  => (int)$limit
         ];
