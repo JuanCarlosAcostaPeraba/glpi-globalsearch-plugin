@@ -4,7 +4,7 @@ if (!defined('GLPI_ROOT')) {
     die('Direct access not allowed');
 }
 
-define('GLOBALSEARCH_VERSION', '1.5.0');
+define('GLOBALSEARCH_VERSION', '1.5.1');
 
 /**
  * Inicialización del plugin (GLPI la ejecuta al cargar el plugin)
@@ -37,9 +37,9 @@ function plugin_init_globalsearch()
 function plugin_version_globalsearch()
 {
     return [
-        'name'    => 'Global Search Enhancer',
+        'name' => 'Global Search Enhancer',
         'version' => GLOBALSEARCH_VERSION,
-        'author'  => 'Juan Carlos Acosta Perabá',
+        'author' => 'Juan Carlos Acosta Perabá',
         'license' => 'GPLv3+',
         'homepage' => 'https://github.com/JuanCarlosAcostaPeraba',
         'requirements' => [

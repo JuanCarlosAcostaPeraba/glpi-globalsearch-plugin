@@ -1,6 +1,6 @@
 # Global Search Enhancer
 
-[![Version](https://img.shields.io/badge/Version-1.5.0-green.svg)](https://github.com/JuanCarlosAcostaPeraba/glpi-globalsearch-plugin/releases)
+[![Version](https://img.shields.io/badge/Version-1.5.1-green.svg)](https://github.com/JuanCarlosAcostaPeraba/glpi-globalsearch-plugin/releases)
 [![GLPI Marketplace](https://img.shields.io/badge/GLPI_Marketplace-Submited-orange.svg)](https://plugins.glpi-project.org/#/author/146)
 [![GLPI](https://img.shields.io/badge/GLPI-10.0.x-blue.svg)](https://glpi-project.org)
 [![License: GPLv3+](https://img.shields.io/badge/License-GPLv3+-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
