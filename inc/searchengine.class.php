@@ -27,98 +27,25 @@ class PluginGlobalsearchSearchEngine
      */
     private function getEntityRestrictCriteria($itemtype, $table_alias = null)
     {
-        // Usar el método estándar de GLPI para obtener restricciones de entidades
-        // Esto maneja automáticamente is_recursive y jerarquías de entidades
-        // getEntitiesRestrictCriteria($table, $field, $value, $recursive)
         $table = $itemtype::getTable();
         $field = 'entities_id';
-        
-        // Obtener todas las entidades activas del usuario (incluyendo recursivas)
+
+        // Obtener todas las entidades activas del usuario
         $entities = [];
         if (isset($_SESSION['glpiactiveentities']) && is_array($_SESSION['glpiactiveentities'])) {
             $entities = $_SESSION['glpiactiveentities'];
         }
-        
+
         if (empty($entities)) {
             return [];
         }
-        
-        // Obtener información de recursividad de las entidades
-        $entity_ids = [];
-        foreach ($entities as $entity_id) {
-            $entity_ids[] = $entity_id;
-            // Si la entidad tiene is_recursive, incluir también sus ancestros
-            // Nota: En GLPI, esto se maneja automáticamente en getEntitiesRestrictCriteria
-            // pero aquí lo hacemos manualmente para mayor control
-        }
-        
-        // Usar el método estándar de GLPI si está disponible
-        if (function_exists('getEntitiesRestrictCriteria')) {
-            $entity_criteria = getEntitiesRestrictCriteria($table, $field, '', true);
-        } else {
-            // Fallback: construir manualmente las restricciones
-            // Obtener todas las entidades accesibles (incluyendo recursivas)
-            $all_entities = [];
-            foreach ($entities as $entity_id) {
-                $all_entities[] = $entity_id;
-                // Obtener ancestros si la entidad es recursiva
-                // En GLPI, esto se hace con getAncestorsOf() si está disponible
-                if (function_exists('getAncestorsOf')) {
-                    $ancestors = getAncestorsOf('glpi_entities', $entity_id);
-                    if (is_array($ancestors)) {
-                        $all_entities = array_merge($all_entities, $ancestors);
-                    }
-                }
-            }
-            $all_entities = array_unique($all_entities);
-            
-            $field_name = ($table_alias !== null) ? $table_alias . '.' . $field : $table . '.' . $field;
-            
-            // FIX: La lógica anterior era incorrecta para items recursivos en entidades padre.
-            // Un item en una entidad padre (ancestor) solo es visible si el item es recursivo (is_recursive=1).
-            // Si el item NO es recursivo, solo es visible si está en la entidad actual.
-            
-            // Como no podemos saber fácilmente si el item es recursivo en la query sin hacer JOINs complejos o subqueries,
-            // y getEntitiesRestrictCriteria ya maneja esto optimizadamente, este fallback es solo "mejor esfuerzo".
-            // Sin embargo, para cumplir con la corrección solicitada:
-            
-            // 1. Items en entidades activas directas (siempre visibles)
-            $direct_entities = $entities;
-            
-            // 2. Items en entidades ancestras (solo si is_recursive=1)
-            $ancestor_entities = array_diff($all_entities, $direct_entities);
-            
-            if (empty($ancestor_entities)) {
-                $entity_criteria = [$field_name => $direct_entities];
-            } else {
-                // Si hay ancestros, necesitamos comprobar is_recursive
-                // Asumimos que la tabla tiene campo 'is_recursive'. Si no, esto podría fallar, pero la mayoría de items con entidad lo tienen.
-                $recursive_field = ($table_alias !== null) ? $table_alias . '.is_recursive' : $table . '.is_recursive';
-                
-                $entity_criteria = [
-                    'OR' => [
-                        [$field_name => $direct_entities],
-                        [
-                            $field_name => $ancestor_entities,
-                            $recursive_field => 1
-                        ]
-                    ]
-                ];
-            }
-        }
-        
-        // Si se proporciona un alias de tabla, ajustar los nombres de campos
-        if ($table_alias !== null && $table_alias !== $table) {
-            $adjusted_criteria = [];
-            foreach ($entity_criteria as $key => $value) {
-                // Reemplazar el nombre de tabla con el alias
-                $new_key = str_replace($table . '.', $table_alias . '.', $key);
-                $adjusted_criteria[$new_key] = $value;
-            }
-            return $adjusted_criteria;
-        }
-        
-        return $entity_criteria;
+
+        $field_name = ($table_alias !== null) ? $table_alias . '.' . $field : $table . '.' . $field;
+
+        // En GLPI 11 simplificamos: limitamos por las entidades activas sin usar is_recursive
+        return [
+            $field_name => $entities
+        ];
     }
 
 

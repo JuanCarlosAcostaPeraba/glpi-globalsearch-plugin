@@ -24,7 +24,7 @@ function plugin_globalsearch_install()
             UNIQUE KEY `search_type` (`search_type`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
 
-        $DB->queryOrDie($query, $DB->error());
+        $DB->doQuery($query);
 
         // Insertar valores por defecto (todos activos)
         $default_types = [
@@ -38,7 +38,7 @@ function plugin_globalsearch_install()
         ];
 
         foreach ($default_types as $type) {
-            $DB->insertOrDie('glpi_plugin_globalsearch_configs', [
+            $DB->insert('glpi_plugin_globalsearch_configs', [
                 'search_type' => $type,
                 'is_enabled'  => 1,
                 'date_mod'    => date('Y-m-d H:i:s')

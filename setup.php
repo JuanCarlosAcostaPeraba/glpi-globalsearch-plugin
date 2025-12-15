@@ -1,10 +1,14 @@
 <?php
 
+use Glpi\Plugin\Hooks;
+
 if (!defined('GLPI_ROOT')) {
     die('Direct access not allowed');
 }
 
-define('GLOBALSEARCH_VERSION', '1.5.1');
+define('GLOBALSEARCH_VERSION', '2.0.0');
+define('GLOBALSEARCH_MIN_GLPI', '11.0.0');
+define('GLOBALSEARCH_MAX_GLPI', '11.0.99');
 
 /**
  * Inicialización del plugin (GLPI la ejecuta al cargar el plugin)
@@ -17,10 +21,10 @@ function plugin_init_globalsearch()
     $PLUGIN_HOOKS['csrf_compliant']['globalsearch'] = true;
 
     // Inyectar nuestro JS en la interfaz central
-    $PLUGIN_HOOKS['add_javascript']['globalsearch'][] = 'js/globalsearch_header.js';
+    $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT]['globalsearch'][] = 'js/globalsearch_header.js';
 
     // Opcional: CSS propio para el modal
-    $PLUGIN_HOOKS['add_css']['globalsearch'][] = 'css/globalsearch.css';
+    $PLUGIN_HOOKS[Hooks::ADD_CSS]['globalsearch'][] = 'css/globalsearch.css';
 
     // Añadir enlace de configuración en el menú de Configuración > Plugins
     if (Session::haveRight('config', UPDATE)) {
@@ -44,8 +48,8 @@ function plugin_version_globalsearch()
         'homepage' => 'https://github.com/JuanCarlosAcostaPeraba',
         'requirements' => [
             'glpi' => [
-                'min' => '10.0.0',
-                'max' => '10.0.99',
+                'min' => '11.0.0',
+                'max' => '11.0.99',
             ],
         ],
     ];
@@ -56,7 +60,25 @@ function plugin_version_globalsearch()
  */
 function plugin_globalsearch_check_prerequisites()
 {
-    // Aquí podrías comprobar versión PHP/extensiones si hace falta
+    // Comprobar versión de GLPI para asegurar compatibilidad con la rama 11.x
+    if (version_compare(GLPI_VERSION, GLOBALSEARCH_MIN_GLPI, 'lt')) {
+        echo sprintf(
+            'This plugin requires GLPI >= %s. Current version: %s. For GLPI 10.x, please use plugin version 1.5.1',
+            GLOBALSEARCH_MIN_GLPI,
+            GLPI_VERSION
+        );
+        return false;
+    }
+
+    if (version_compare(GLPI_VERSION, GLOBALSEARCH_MAX_GLPI, 'gt')) {
+        echo sprintf(
+            'This plugin is not compatible with GLPI > %s. Current version: %s',
+            GLOBALSEARCH_MAX_GLPI,
+            GLPI_VERSION
+        );
+        return false;
+    }
+
     return true;
 }
 
