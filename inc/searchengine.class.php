@@ -175,11 +175,11 @@ class PluginGlobalsearchSearchEngine
 
     /**
      * Búsqueda en tickets (incluyendo cerrados/resueltos)
+     * Devuelve todos los resultados sin límite, usando estrategia Bulk Load para técnicos
      *
-     * @param int $limit
      * @return array
      */
-    public function searchTickets($limit = 20)
+    public function searchTickets()
     {
         global $DB;
 
@@ -190,69 +190,21 @@ class PluginGlobalsearchSearchEngine
         // Obtener restricciones de entidades usando métodos estándar de GLPI
         $entity_criteria = $this->getEntityRestrictCriteria('Ticket', 'glpi_tickets');
 
-        // Búsqueda por ID exacta si es numérico
+        // Construir criterios WHERE comunes
+        $where = [];
         if (is_numeric($this->raw_query)) {
-            $criteria = [
-                'SELECT' => [
-                    'glpi_tickets.id',
-                    'glpi_tickets.name',
-                    'glpi_tickets.status',
-                    'glpi_tickets.entities_id',
-                    'glpi_tickets.date',
-                    'glpi_tickets.closedate',
-                    'glpi_tickets.date_mod',
-                    'glpi_users.firstname AS tech_firstname',
-                    'glpi_users.realname AS tech_realname'
-                ],
-                'FROM'   => 'glpi_tickets',
-                'LEFT JOIN' => [
-                    'glpi_tickets_users' => [
-                        'ON' => [
-                            'glpi_tickets_users' => 'tickets_id',
-                            'glpi_tickets' => 'id'
-                        ],
-                        'AND' => [
-                            'glpi_tickets_users.type' => 2
-                        ]
-                    ],
-                    'glpi_users' => [
-                        'ON' => [
-                            'glpi_users' => 'id',
-                            'glpi_tickets_users' => 'users_id'
-                        ]
-                    ]
-                ],
-                'WHERE'  => array_merge(
-                    ['glpi_tickets.id' => $this->raw_query],
-                    $entity_criteria
-                )
-            ];
-
-            $iterator = $DB->request($criteria);
-            $results = [];
-            foreach ($iterator as $row) {
-                // Verificar permisos adicionales antes de incluir el resultado
-                $ticket = new Ticket();
-                if ($ticket->can($row['id'], READ)) {
-                    $row['status_name'] = Ticket::getStatus($row['status']);
-                    $firstname = $row['tech_firstname'] ?? '';
-                    $realname  = $row['tech_realname'] ?? '';
-                    $fullname  = trim($firstname . ' ' . $realname);
-                    $row['tech_name'] = $fullname !== '' ? $fullname : __('Not assigned');
-                    $results[] = $row;
-                }
-            }
-            return $results;
-        }
-
-        if (mb_strlen($this->raw_query) < 3) {
+            $where = ['glpi_tickets.id' => $this->raw_query];
+        } elseif (mb_strlen($this->raw_query) >= 3) {
+            $search_fields = ['glpi_tickets.name', 'glpi_tickets.content'];
+            $where = $this->getMultiWordCriteria($search_fields);
+        } else {
             return [];
         }
 
-        // Campos donde buscar
-        $search_fields = ['glpi_tickets.name', 'glpi_tickets.content'];
+        $common_where = array_merge($where, $entity_criteria, ['glpi_tickets.is_deleted' => 0]);
 
-        $criteria = [
+        // 1. OBTENER TODOS LOS TICKETS (SIN LIMIT, SIN JOIN de técnicos para evitar duplicados)
+        $iterator = $DB->request([
             'SELECT' => [
                 'glpi_tickets.id',
                 'glpi_tickets.name',
@@ -260,59 +212,78 @@ class PluginGlobalsearchSearchEngine
                 'glpi_tickets.entities_id',
                 'glpi_tickets.date',
                 'glpi_tickets.closedate',
-                'glpi_tickets.date_mod',
-                'glpi_users.firstname AS tech_firstname',
-                'glpi_users.realname AS tech_realname'
+                'glpi_tickets.date_mod'
             ],
             'FROM'   => 'glpi_tickets',
-            'LEFT JOIN' => [
-                'glpi_tickets_users' => [
-                    'ON' => [
-                        'glpi_tickets_users' => 'tickets_id',
-                        'glpi_tickets' => 'id'
-                    ],
-                    'AND' => [
-                        'glpi_tickets_users.type' => 2
-                    ]
-                ],
-                'glpi_users' => [
-                    'ON' => [
-                        'glpi_users' => 'id',
-                        'glpi_tickets_users' => 'users_id'
-                    ]
-                ]
-            ],
-            'WHERE'  => array_merge(
-                $this->getMultiWordCriteria($search_fields),
-                $entity_criteria
-            ),
-            'ORDER'  => 'glpi_tickets.date_mod DESC',
-            'LIMIT'  => (int)$limit
-        ];
+            'WHERE'  => $common_where,
+            'ORDER'  => 'glpi_tickets.date_mod DESC'
+        ]);
 
-        $iterator = $DB->request($criteria);
-        $results  = [];
+        $tickets = [];
+        $ticket_ids = [];
+        $ticket_obj = new Ticket();
 
         foreach ($iterator as $row) {
-            // Verificar permisos adicionales antes de incluir el resultado
-            $ticket = new Ticket();
-            if ($ticket->can($row['id'], READ)) {
+            // Verificar permisos antes de agregar
+            if ($ticket_obj->can($row['id'], READ)) {
                 $row['status_name'] = Ticket::getStatus($row['status']);
-                $firstname = $row['tech_firstname'] ?? '';
-                $realname  = $row['tech_realname'] ?? '';
-                $fullname  = trim($firstname . ' ' . $realname);
-                $row['tech_name'] = $fullname !== '' ? $fullname : __('Not assigned');
-                $results[] = $row;
+                $row['tech_name']   = __('Not assigned'); // Valor inicial
+                $tickets[$row['id']] = $row;
+                $ticket_ids[] = $row['id'];
             }
         }
 
-        return $results;
+        // 2. CARGA MASIVA DE TÉCNICOS (BULK LOAD)
+        if (!empty($ticket_ids)) {
+            $tech_iter = $DB->request([
+                'SELECT' => [
+                    'glpi_tickets_users.tickets_id',
+                    'glpi_users.firstname',
+                    'glpi_users.realname',
+                    'glpi_users.name AS uname'
+                ],
+                'FROM'   => 'glpi_tickets_users',
+                'INNER JOIN' => [
+                    'glpi_users' => [
+                        'ON' => ['glpi_tickets_users' => 'users_id', 'glpi_users' => 'id']
+                    ]
+                ],
+                'WHERE' => [
+                    'glpi_tickets_users.tickets_id' => $ticket_ids,
+                    'glpi_tickets_users.type'       => 2 // Assigned
+                ]
+            ]);
+
+            $techs_by_ticket = [];
+            foreach ($tech_iter as $tech_row) {
+                $tid = $tech_row['tickets_id'];
+                $fullname = trim($tech_row['firstname'] . ' ' . $tech_row['realname']);
+                if (empty($fullname)) {
+                    $fullname = $tech_row['uname'];
+                }
+
+                if (isset($techs_by_ticket[$tid])) {
+                    $techs_by_ticket[$tid][] = $fullname;
+                } else {
+                    $techs_by_ticket[$tid] = [$fullname];
+                }
+            }
+
+            // Asignar nombres concatenados
+            foreach ($techs_by_ticket as $tid => $names) {
+                if (isset($tickets[$tid])) {
+                    $tickets[$tid]['tech_name'] = implode(', ', $names);
+                }
+            }
+        }
+
+        return array_values($tickets);
     }
 
     /**
      * Búsqueda en proyectos
      */
-    public function searchProjects($limit = 20)
+    public function searchProjects()
     {
         global $DB;
 
@@ -376,8 +347,7 @@ class PluginGlobalsearchSearchEngine
                 $this->getMultiWordCriteria($search_fields),
                 $entity_criteria
             ),
-            'ORDER'  => 'glpi_projects.date_mod DESC',
-            'LIMIT'  => (int)$limit
+            'ORDER'  => 'glpi_projects.date_mod DESC'
         ];
 
         $iterator = $DB->request($criteria);
@@ -395,7 +365,7 @@ class PluginGlobalsearchSearchEngine
     /**
      * Búsqueda en documentos
      */
-    public function searchDocuments($limit = 20)
+    public function searchDocuments()
     {
         global $DB;
 
@@ -461,8 +431,7 @@ class PluginGlobalsearchSearchEngine
                 ],
                 $entity_criteria
             ),
-            'ORDER'  => 'glpi_documents.date_mod DESC',
-            'LIMIT'  => (int)$limit
+            'ORDER'  => 'glpi_documents.date_mod DESC'
         ];
 
         $iterator = $DB->request($criteria);
@@ -480,7 +449,7 @@ class PluginGlobalsearchSearchEngine
     /**
      * Búsqueda en software
      */
-    public function searchSoftware($limit = 20)
+    public function searchSoftware()
     {
         global $DB;
 
@@ -546,8 +515,7 @@ class PluginGlobalsearchSearchEngine
                 ],
                 $entity_criteria
             ),
-            'ORDER'  => 'glpi_softwares.date_mod DESC',
-            'LIMIT'  => (int)$limit
+            'ORDER'  => 'glpi_softwares.date_mod DESC'
         ];
 
         $iterator = $DB->request($criteria);
@@ -565,7 +533,7 @@ class PluginGlobalsearchSearchEngine
     /**
      * Búsqueda en usuarios
      */
-    public function searchUsers($limit = 20)
+    public function searchUsers()
     {
         global $DB;
 
@@ -629,8 +597,7 @@ class PluginGlobalsearchSearchEngine
                 $this->getMultiWordCriteria($search_fields),
                 ['glpi_users.is_deleted' => 0]
             ),
-            'ORDER'  => 'glpi_users.date_mod DESC',
-            'LIMIT'  => (int)$limit
+            'ORDER'  => 'glpi_users.date_mod DESC'
         ];
 
         $iterator = $DB->request($criteria);
@@ -652,7 +619,7 @@ class PluginGlobalsearchSearchEngine
     /**
      * Búsqueda en tareas de tickets
      */
-    public function searchTicketTasks($limit = 20)
+    public function searchTicketTasks()
     {
         global $DB;
 
@@ -730,8 +697,7 @@ class PluginGlobalsearchSearchEngine
                     ]
                 ]
             ),
-            'ORDER'  => 'glpi_tickettasks.date_mod DESC',
-            'LIMIT'  => (int)$limit
+            'ORDER'  => 'glpi_tickettasks.date_mod DESC'
         ];
 
         $iterator = $DB->request($criteria);
@@ -749,7 +715,7 @@ class PluginGlobalsearchSearchEngine
     /**
      * Búsqueda en tareas de proyectos
      */
-    public function searchProjectTasks($limit = 20)
+    public function searchProjectTasks()
     {
         global $DB;
 
@@ -844,8 +810,7 @@ class PluginGlobalsearchSearchEngine
                     ]
                 ] : []
             ),
-            'ORDER'  => 'glpi_projecttasks.date_mod DESC',
-            'LIMIT'  => (int)$limit
+            'ORDER'  => 'glpi_projecttasks.date_mod DESC'
         ];
 
         $iterator = $DB->request($criteria);

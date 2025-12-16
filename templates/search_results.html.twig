@@ -12,7 +12,7 @@
 						<h3 class="card-title">{{ _n('Ticket', 'Tickets', 2) }}</h3>
 					</div>
 					<div class="table-responsive">
-						<table class="table table-hover card-table">
+						<table class="table table-hover card-table search-results-table" id="table-tickets">
 							<thead>
 								<tr>
 									<th>{{ __('ID') }}</th>
@@ -49,7 +49,7 @@
 						<h3 class="card-title">{{ _n('Project', 'Projects', 2) }}</h3>
 					</div>
 					<div class="table-responsive">
-						<table class="table table-hover card-table">
+						<table class="table table-hover card-table search-results-table" id="table-projects">
 							<thead>
 								<tr>
 									<th>{{ __('ID') }}</th>
@@ -82,7 +82,7 @@
 						<h3 class="card-title">{{ _n('Document', 'Documents', 2) }}</h3>
 					</div>
 					<div class="table-responsive">
-						<table class="table table-hover card-table">
+						<table class="table table-hover card-table search-results-table" id="table-documents">
 							<thead>
 								<tr>
 									<th>{{ __('ID') }}</th>
@@ -117,7 +117,7 @@
 						<h3 class="card-title">{{ _n('Software', 'Software', 2) }}</h3>
 					</div>
 					<div class="table-responsive">
-						<table class="table table-hover card-table">
+						<table class="table table-hover card-table search-results-table" id="table-software">
 							<thead>
 								<tr>
 									<th>{{ __('ID') }}</th>
@@ -150,7 +150,7 @@
 						<h3 class="card-title">{{ _n('User', 'Users', 2) }}</h3>
 					</div>
 					<div class="table-responsive">
-						<table class="table table-hover card-table">
+						<table class="table table-hover card-table search-results-table" id="table-users">
 							<thead>
 								<tr>
 									<th>{{ __('ID') }}</th>
@@ -185,7 +185,7 @@
 						<h3 class="card-title">{{ __('Ticket tasks') }}</h3>
 					</div>
 					<div class="table-responsive">
-						<table class="table table-hover card-table">
+						<table class="table table-hover card-table search-results-table" id="table-ticket-tasks">
 							<thead>
 								<tr>
 									<th>{{ __('ID') }}</th>
@@ -226,7 +226,7 @@
 						<h3 class="card-title">{{ __('Project tasks') }}</h3>
 					</div>
 					<div class="table-responsive">
-						<table class="table table-hover card-table">
+						<table class="table table-hover card-table search-results-table" id="table-project-tasks">
 							<thead>
 								<tr>
 									<th>{{ __('ID') }}</th>
@@ -276,3 +276,11 @@
 		</div>
 	</div>
 </div>
+
+{# Incluir script JavaScript de funcionalidades mejoradas #}
+<script>
+	console.log('GlobalSearch: Template loaded, plugin_webroot =   {{ plugin_webroot }}');
+console.log('GlobalSearch: Script will load from:   {{ plugin_webroot }}/public/js/globalsearch_enhanced.js');
+console.log('GlobalSearch: Tables found:', document.querySelectorAll('.search-results-table').length);
+</script>
+<script src="{{ plugin_webroot }}/public/js/globalsearch_enhanced.js" onerror="console.error('GlobalSearch: Failed to load script')" onload="console.log('GlobalSearch: Script loaded successfully')"></script>

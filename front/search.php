@@ -38,6 +38,9 @@ error_log("Query: " . $query);
 error_log("Results Tickets: " . count($results['Ticket'] ?? []));
 error_log("Results Projects: " . count($results['Project'] ?? []));
 
+// Obtener ruta web del plugin para el script JS
+$plugin_webroot = Plugin::getWebDir('globalsearch');
+
 // Renderizar plantilla Twig usando el namespace del plugin
 // @globalsearch/ apunta a /plugins/globalsearch/templates/
 try {
@@ -45,7 +48,8 @@ try {
         '@globalsearch/search_results.html.twig',
         [
             'query'   => $query,
-            'results' => $results
+            'results' => $results,
+            'plugin_webroot' => $plugin_webroot
         ]
     );
 } catch (Exception $e) {
