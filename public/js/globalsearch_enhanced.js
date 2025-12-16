@@ -126,25 +126,34 @@
         const totalPages = Math.ceil(totalRows / ITEMS_PER_PAGE);
 
         function showPage(page) {
+            // Obtener las filas actuales (pueden estar filtradas)
+            const currentRows = table._pagination ? table._pagination.getRows() : rows;
+            const currentTotalRows = currentRows.length;
+            const currentTotalPages = Math.ceil(currentTotalRows / ITEMS_PER_PAGE);
+            
             const start = page * ITEMS_PER_PAGE;
-            const end = Math.min(start + ITEMS_PER_PAGE, totalRows);
+            const end = Math.min(start + ITEMS_PER_PAGE, currentTotalRows);
 
-            rows.forEach(function (row, index) {
+            // Primero ocultar todas las filas
+            rows.forEach(function (row) {
+                row.style.display = 'none';
+            });
+
+            // Luego mostrar solo las filas de la página actual que están en currentRows
+            currentRows.forEach(function (row, index) {
                 if (index >= start && index < end) {
                     row.style.display = '';
-                } else {
-                    row.style.display = 'none';
                 }
             });
 
             // Actualizar información
-            const startNum = start + 1;
+            const startNum = currentTotalRows > 0 ? start + 1 : 0;
             const endNum = end;
-            paginationInfo.textContent = `Showing ${startNum} - ${endNum} of ${totalRows}`;
+            paginationInfo.textContent = `Showing ${startNum} - ${endNum} of ${currentTotalRows}`;
 
             // Actualizar botones
             prevBtn.disabled = (page === 0);
-            nextBtn.disabled = (page >= totalPages - 1);
+            nextBtn.disabled = (page >= currentTotalPages - 1);
 
             currentPage = page;
 
@@ -171,8 +180,9 @@
         table._pagination = {
             showPage: showPage,
             getCurrentPage: () => currentPage,
-            getTotalPages: () => totalPages,
-            getRows: () => rows
+            getTotalPages: () => Math.ceil((table._pagination.getRows().length) / ITEMS_PER_PAGE),
+            getRows: () => rows, // Filas originales sin filtrar
+            getFilteredRows: () => rows.filter(r => r.style.display !== 'none' && r.offsetParent !== null) // Filas visibles después de filtros
         };
     }
 
@@ -329,6 +339,7 @@
         console.log('GlobalSearch: Filtering', rows.length, 'rows');
 
         // Aplicar filtros
+        const filteredRows = [];
         rows.forEach(function (row) {
             let showRow = true;
             const cells = row.querySelectorAll('td');
@@ -347,18 +358,29 @@
                 }
             });
 
-            row.style.display = showRow ? '' : 'none';
+            // Guardar el estado del filtro en un atributo data
+            row.setAttribute('data-filter-visible', showRow ? 'true' : 'false');
+            
+            if (showRow) {
+                filteredRows.push(row);
+            }
         });
 
-        const visibleRows = rows.filter(r => r.style.display !== 'none');
-        console.log('GlobalSearch: After filtering,', visibleRows.length, 'rows visible');
+        console.log('GlobalSearch: After filtering,', filteredRows.length, 'rows visible out of', rows.length, 'total');
+        console.log('GlobalSearch: Filtered rows:', filteredRows.map(r => r.querySelector('td')?.textContent?.substring(0, 30)));
 
         // Re-aplicar paginación con filas filtradas
         if (table._pagination) {
-            if (visibleRows.length > 0) {
-                // Actualizar la lista de filas para paginación
-                table._pagination.getRows = () => visibleRows;
-                // Resetear a la primera página
+            // Actualizar la función getRows para devolver solo las filas filtradas
+            table._pagination.getRows = () => filteredRows;
+            
+            if (filteredRows.length > 0) {
+                // Mostrar paginación si estaba oculta
+                const pagination = table.closest('.card').querySelector('.search-pagination');
+                if (pagination) {
+                    pagination.style.display = '';
+                }
+                // Resetear a la primera página con las filas filtradas
                 table._pagination.showPage(0);
             } else {
                 // Si no hay filas visibles, ocultar paginación
@@ -366,6 +388,10 @@
                 if (pagination) {
                     pagination.style.display = 'none';
                 }
+                // Ocultar todas las filas
+                rows.forEach(function (row) {
+                    row.style.display = 'none';
+                });
             }
         }
 
@@ -384,17 +410,23 @@
             input.value = '';
         });
 
-        // Mostrar todas las filas
+        // Obtener todas las filas originales
         const tbody = table.querySelector('tbody');
-        if (tbody) {
-            const rows = tbody.querySelectorAll('tr');
-            rows.forEach(function (row) {
-                const cells = row.querySelectorAll('td');
-                if (cells.length > 0) {
-                    row.style.display = '';
-                }
-            });
-        }
+        if (!tbody) return;
+
+        let allRows = Array.from(tbody.querySelectorAll('tr'));
+        let rows = allRows.filter(function (row) {
+            const cells = row.querySelectorAll('td');
+            const hasCells = cells.length > 0;
+            const isNoResults = row.classList.contains('no-results') ||
+                row.textContent.trim().toLowerCase().includes('no results');
+            return hasCells && !isNoResults;
+        });
+
+        // Remover atributos de filtro
+        rows.forEach(function (row) {
+            row.removeAttribute('data-filter-visible');
+        });
 
         // Restaurar paginación original
         if (table._pagination) {
@@ -404,19 +436,9 @@
                 pagination.style.display = '';
             }
             // Restaurar lista original de filas
-            const tbodyRestore = table.querySelector('tbody');
-            if (tbodyRestore) {
-                let allRows = Array.from(tbodyRestore.querySelectorAll('tr'));
-                let rows = allRows.filter(function (row) {
-                    const cells = row.querySelectorAll('td');
-                    const hasCells = cells.length > 0;
-                    const isNoResults = row.classList.contains('no-results') ||
-                        row.textContent.trim().toLowerCase().includes('no results');
-                    return hasCells && !isNoResults;
-                });
-                table._pagination.getRows = () => rows;
-                table._pagination.showPage(0);
-            }
+            table._pagination.getRows = () => rows;
+            // Mostrar primera página con todas las filas
+            table._pagination.showPage(0);
         }
 
         // Re-aplicar resaltado
