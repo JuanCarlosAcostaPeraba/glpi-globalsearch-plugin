@@ -230,28 +230,93 @@
             filterRow.appendChild(filterCell);
         });
 
+        // Añadir celda con botón "Aplicar filtros"
+        const buttonCell = document.createElement('td');
+        buttonCell.colSpan = headers.length;
+        buttonCell.className = 'text-end';
+        buttonCell.style.padding = '0.5rem';
+        
+        const applyButton = document.createElement('button');
+        applyButton.type = 'button';
+        applyButton.className = 'btn btn-sm btn-primary filter-apply-btn';
+        applyButton.innerHTML = '<i class="fas fa-filter"></i> Apply Filters';
+        applyButton.setAttribute('data-table-id', table.getAttribute('id'));
+        
+        const clearButton = document.createElement('button');
+        clearButton.type = 'button';
+        clearButton.className = 'btn btn-sm btn-outline-secondary filter-clear-btn ms-2';
+        clearButton.innerHTML = '<i class="fas fa-times"></i> Clear';
+        clearButton.setAttribute('data-table-id', table.getAttribute('id'));
+        
+        buttonCell.appendChild(applyButton);
+        buttonCell.appendChild(clearButton);
+        
+        // Crear segunda fila para el botón
+        const buttonRow = document.createElement('tr');
+        buttonRow.className = 'table-filters-actions';
+        buttonRow.appendChild(buttonCell);
+        
         thead.appendChild(filterRow);
+        thead.appendChild(buttonRow);
 
-        // Event listeners para filtros
+        // Event listeners para botones
+        applyButton.addEventListener('click', function () {
+            applyFilters(table);
+        });
+        
+        clearButton.addEventListener('click', function () {
+            clearFilters(table);
+        });
+        
+        // Permitir Enter en los inputs para aplicar filtros
         const filterInputs = filterRow.querySelectorAll('.filter-input');
         filterInputs.forEach(function (input) {
-            input.addEventListener('input', function () {
-                applyFilters(table);
+            input.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyFilters(table);
+                }
             });
         });
+    }
+
+    /**
+     * Obtener texto de una celda (sin HTML, solo texto)
+     */
+    function getCellText(cell) {
+        if (!cell) return '';
+        
+        // Si hay HTML original guardado, usar ese texto
+        const originalHTML = cell.getAttribute('data-original-html');
+        if (originalHTML) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = originalHTML;
+            return tempDiv.textContent || tempDiv.innerText || '';
+        }
+        
+        // Si no, usar textContent (que ignora HTML)
+        return cell.textContent || cell.innerText || '';
     }
 
     /**
      * Aplicar filtros a la tabla
      */
     function applyFilters(table) {
+        console.log('GlobalSearch: Applying filters to table', table.getAttribute('id'));
+        
         const tbody = table.querySelector('tbody');
-        if (!tbody) return;
+        if (!tbody) {
+            console.log('GlobalSearch: No tbody found');
+            return;
+        }
 
         const filterInputs = table.querySelectorAll('.filter-input');
-        if (filterInputs.length === 0) return;
+        if (filterInputs.length === 0) {
+            console.log('GlobalSearch: No filter inputs found');
+            return;
+        }
 
-        // Obtener todas las filas válidas
+        // Obtener todas las filas válidas (sin contar mensajes de "no results")
         let allRows = Array.from(tbody.querySelectorAll('tr'));
         let rows = allRows.filter(function (row) {
             const cells = row.querySelectorAll('td');
@@ -261,6 +326,9 @@
             return hasCells && !isNoResults;
         });
 
+        console.log('GlobalSearch: Filtering', rows.length, 'rows');
+
+        // Aplicar filtros
         rows.forEach(function (row) {
             let showRow = true;
             const cells = row.querySelectorAll('td');
@@ -271,9 +339,9 @@
                 const cell = cells[columnIndex];
 
                 if (filterValue && cell) {
-                    // Obtener texto original sin resaltado
-                    const cellText = cell.getAttribute('data-original-text') || cell.textContent.trim().toLowerCase();
-                    if (!cellText.toLowerCase().includes(filterValue)) {
+                    // Obtener texto de la celda (sin HTML)
+                    const cellText = getCellText(cell).trim().toLowerCase();
+                    if (!cellText.includes(filterValue)) {
                         showRow = false;
                     }
                 }
@@ -282,12 +350,71 @@
             row.style.display = showRow ? '' : 'none';
         });
 
+        const visibleRows = rows.filter(r => r.style.display !== 'none');
+        console.log('GlobalSearch: After filtering,', visibleRows.length, 'rows visible');
+
         // Re-aplicar paginación con filas filtradas
         if (table._pagination) {
-            const visibleRows = rows.filter(r => r.style.display !== 'none');
-            // Actualizar paginación con filas visibles
             if (visibleRows.length > 0) {
+                // Actualizar la lista de filas para paginación
                 table._pagination.getRows = () => visibleRows;
+                // Resetear a la primera página
+                table._pagination.showPage(0);
+            } else {
+                // Si no hay filas visibles, ocultar paginación
+                const pagination = table.closest('.card').querySelector('.search-pagination');
+                if (pagination) {
+                    pagination.style.display = 'none';
+                }
+            }
+        }
+
+        // Re-aplicar resaltado solo a filas visibles
+        applyHighlight(table);
+    }
+
+    /**
+     * Limpiar filtros
+     */
+    function clearFilters(table) {
+        console.log('GlobalSearch: Clearing filters for table', table.getAttribute('id'));
+        
+        const filterInputs = table.querySelectorAll('.filter-input');
+        filterInputs.forEach(function (input) {
+            input.value = '';
+        });
+
+        // Mostrar todas las filas
+        const tbody = table.querySelector('tbody');
+        if (tbody) {
+            const rows = tbody.querySelectorAll('tr');
+            rows.forEach(function (row) {
+                const cells = row.querySelectorAll('td');
+                if (cells.length > 0) {
+                    row.style.display = '';
+                }
+            });
+        }
+
+        // Restaurar paginación original
+        if (table._pagination) {
+            const card = table.closest('.card');
+            const pagination = card ? card.querySelector('.search-pagination') : null;
+            if (pagination) {
+                pagination.style.display = '';
+            }
+            // Restaurar lista original de filas
+            const tbodyRestore = table.querySelector('tbody');
+            if (tbodyRestore) {
+                let allRows = Array.from(tbodyRestore.querySelectorAll('tr'));
+                let rows = allRows.filter(function (row) {
+                    const cells = row.querySelectorAll('td');
+                    const hasCells = cells.length > 0;
+                    const isNoResults = row.classList.contains('no-results') ||
+                        row.textContent.trim().toLowerCase().includes('no results');
+                    return hasCells && !isNoResults;
+                });
+                table._pagination.getRows = () => rows;
                 table._pagination.showPage(0);
             }
         }
