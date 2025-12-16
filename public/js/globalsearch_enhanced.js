@@ -320,7 +320,7 @@
     }
 
     /**
-     * Resaltar términos de búsqueda
+     * Resaltar términos de búsqueda preservando enlaces HTML
      */
     function applyHighlight(table) {
         const searchQuery = getSearchQuery();
@@ -338,16 +338,57 @@
 
             const cells = row.querySelectorAll('td');
             cells.forEach(function (cell) {
-                const originalText = cell.getAttribute('data-original-text') || cell.textContent;
-                cell.setAttribute('data-original-text', originalText);
+                // Guardar HTML original si no está guardado
+                if (!cell.hasAttribute('data-original-html')) {
+                    cell.setAttribute('data-original-html', cell.innerHTML);
+                }
 
-                let highlightedText = originalText;
-                terms.forEach(function (term) {
-                    const regex = new RegExp(`(${escapeRegex(term)})`, 'gi');
-                    highlightedText = highlightedText.replace(regex, '<mark>$1</mark>');
-                });
+                // Obtener HTML original
+                const originalHTML = cell.getAttribute('data-original-html');
 
-                cell.innerHTML = highlightedText;
+                // Crear un elemento temporal para trabajar con el HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = originalHTML;
+
+                // Función recursiva para resaltar texto en nodos
+                function highlightTextNodes(node) {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        // Es un nodo de texto, aplicar resaltado
+                        let text = node.textContent;
+                        let highlightedText = text;
+
+                        terms.forEach(function (term) {
+                            const regex = new RegExp(`(${escapeRegex(term)})`, 'gi');
+                            highlightedText = highlightedText.replace(regex, '<mark>$1</mark>');
+                        });
+
+                        // Si hay cambios, reemplazar el nodo de texto
+                        if (highlightedText !== text) {
+                            const tempSpan = document.createElement('span');
+                            tempSpan.innerHTML = highlightedText;
+
+                            // Reemplazar el nodo de texto con los nodos del span
+                            while (tempSpan.firstChild) {
+                                node.parentNode.insertBefore(tempSpan.firstChild, node);
+                            }
+                            node.parentNode.removeChild(node);
+                        }
+                    } else if (node.nodeType === Node.ELEMENT_NODE) {
+                        // Es un elemento, procesar sus hijos recursivamente
+                        // No procesar nodos <mark> para evitar anidación
+                        if (node.tagName !== 'MARK') {
+                            const children = Array.from(node.childNodes);
+                            children.forEach(highlightTextNodes);
+                        }
+                    }
+                }
+
+                // Procesar todos los nodos
+                const allNodes = Array.from(tempDiv.childNodes);
+                allNodes.forEach(highlightTextNodes);
+
+                // Restaurar el HTML procesado
+                cell.innerHTML = tempDiv.innerHTML;
             });
         });
     }
