@@ -615,7 +615,7 @@ class PluginGlobalsearchSearchEngine
         if (mb_strlen($this->raw_query) < 1) {
             return [];
         }
-        
+
         if (!TicketTask::canView()) {
             return [];
         }
@@ -716,18 +716,25 @@ class PluginGlobalsearchSearchEngine
         // Obtener restricciones de entidades usando métodos estándar de GLPI
         $entity_criteria = $this->getEntityRestrictCriteria('ProjectTask', 'glpi_projecttasks');
 
+        $has_private_field = $DB->fieldExists('glpi_projecttasks', 'is_private');
+
         if (is_numeric($this->raw_query)) {
+            $select = [
+                'glpi_projecttasks.id',
+                'glpi_projecttasks.name',
+                'glpi_projecttasks.content',
+                'glpi_projecttasks.projects_id',
+                'glpi_projecttasks.entities_id',
+                'glpi_projecttasks.date_mod',
+                'glpi_projecttasks.plan_start_date'
+            ];
+
+            if ($has_private_field) {
+                $select[] = 'glpi_projecttasks.is_private';
+            }
+
             $criteria = [
-                'SELECT' => [
-                    'glpi_projecttasks.id',
-                    'glpi_projecttasks.name',
-                    'glpi_projecttasks.content',
-                    'glpi_projecttasks.projects_id',
-                    'glpi_projecttasks.entities_id',
-                    'glpi_projecttasks.date_mod',
-                    'glpi_projecttasks.plan_start_date',
-                    'glpi_projecttasks.is_private'
-                ],
+                'SELECT' => $select,
                 'FROM'   => 'glpi_projecttasks',
                 'WHERE'  => array_merge(
                     [
@@ -735,12 +742,12 @@ class PluginGlobalsearchSearchEngine
                         'glpi_projecttasks.is_template' => 0
                     ],
                     $entity_criteria,
-                    [
+                    $has_private_field ? [
                         'OR' => [
                             'glpi_projecttasks.is_private' => 0,
                             'glpi_projecttasks.users_id'   => Session::getLoginUserID()
                         ]
-                    ]
+                    ] : []
                 )
             ];
 
@@ -762,18 +769,23 @@ class PluginGlobalsearchSearchEngine
 
         $search_fields = ['glpi_projecttasks.name', 'glpi_projecttasks.content', 'glpi_projecttasks.comment'];
 
+        $select = [
+            'glpi_projecttasks.id',
+            'glpi_projecttasks.name',
+            'glpi_projecttasks.content',
+            'glpi_projecttasks.projects_id',
+            'glpi_projecttasks.entities_id',
+            'glpi_projecttasks.date_mod',
+            'glpi_projecttasks.plan_start_date',
+            'glpi_projecttasks.users_id'
+        ];
+
+        if ($has_private_field) {
+            $select[] = 'glpi_projecttasks.is_private';
+        }
+
         $criteria = [
-            'SELECT' => [
-                'glpi_projecttasks.id',
-                'glpi_projecttasks.name',
-                'glpi_projecttasks.content',
-                'glpi_projecttasks.projects_id',
-                'glpi_projecttasks.entities_id',
-                'glpi_projecttasks.date_mod',
-                'glpi_projecttasks.plan_start_date',
-                'glpi_projecttasks.is_private',
-                'glpi_projecttasks.users_id'
-            ],
+            'SELECT' => $select,
             'FROM'   => 'glpi_projecttasks',
             'WHERE'  => array_merge(
                 $this->getMultiWordCriteria($search_fields),
@@ -781,12 +793,12 @@ class PluginGlobalsearchSearchEngine
                     'glpi_projecttasks.is_template' => 0
                 ],
                 $entity_criteria,
-                [
+                $has_private_field ? [
                     'OR' => [
                         'glpi_projecttasks.is_private' => 0,
                         'glpi_projecttasks.users_id'   => Session::getLoginUserID()
                     ]
-                ]
+                ] : []
             ),
             'ORDER'  => 'glpi_projecttasks.date_mod DESC',
             'LIMIT'  => (int)$limit
