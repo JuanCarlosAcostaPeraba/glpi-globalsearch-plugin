@@ -9,7 +9,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const nativeSearchForm = document.querySelector('form[data-submit-once] input[name="globalsearch"]');
 
     if (!nativeSearchForm) {
-        console.warn('[globalsearch] No se ha encontrado la barra de búsqueda nativa de GLPI.');
+        // Si no existe la barra de búsqueda nativa, no hacemos nada
+        //console.warn('[globalsearch] No se ha encontrado la barra de búsqueda nativa de GLPI.');
         return;
     }
 
@@ -17,7 +18,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchContainer = nativeSearchForm.closest('div[class*="ms-"]');
 
     if (!searchContainer) {
-        console.warn('[globalsearch] No se ha encontrado el contenedor de la barra de búsqueda.');
+        // Si no existe el contenedor esperado, no insertamos el botón
+        //console.warn('[globalsearch] No se ha encontrado el contenedor de la barra de búsqueda.');
         return;
     }
 
@@ -65,11 +67,18 @@ document.addEventListener('DOMContentLoaded', function () {
                         <button type="button" class="btn btn-outline-secondary globalsearch-close">
                             Cancelar
                         </button>
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary globalsearch-submit">
                             Buscar
                         </button>
                     </div>
                 </form>
+
+                <div class="globalsearch-modal-loader d-none text-center mt-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Buscando...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Buscando, por favor espera...</p>
+                </div>
             </div>
         </div>
     `;
@@ -80,6 +89,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const rootDoc = (typeof CFG_GLPI !== 'undefined' && CFG_GLPI.root_doc) ? CFG_GLPI.root_doc : '';
     const actionUrl = rootDoc + '/plugins/globalsearch/front/search.php';
     form.setAttribute('action', actionUrl);
+
+    const modalLoader = modal.querySelector('.globalsearch-modal-loader');
+    const submitButton = modal.querySelector('.globalsearch-submit');
 
     // Helpers abrir/cerrar
     function openModal() {
@@ -96,6 +108,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function closeModal() {
         modal.classList.add('d-none');
+
+        // Ocultar loader y reactivar controles si el modal se cierra sin navegar
+        if (modalLoader) {
+            modalLoader.classList.add('d-none');
+        }
+        if (form) {
+            form.removeAttribute('data-submitting');
+            const controls = form.querySelectorAll('input, button');
+            controls.forEach(function (el) {
+                el.disabled = false;
+            });
+        }
     }
 
     // Eventos
@@ -116,6 +140,51 @@ document.addEventListener('DOMContentLoaded', function () {
             closeModal();
         }
     });
+
+    // Mostrar loader al enviar el formulario
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            // Evitar doble envío
+            if (form.getAttribute('data-submitting') === '1') {
+                return;
+            }
+            form.setAttribute('data-submitting', '1');
+
+            // Asegurar que el valor de búsqueda se envía correctamente
+            const searchInput = form.querySelector('input[name="globalsearch"]');
+            if (searchInput) {
+                const value = searchInput.value != null ? String(searchInput.value) : '';
+
+                // Si por alguna razón el input pudiera ser deshabilitado por otros scripts,
+                // creamos un campo oculto con el mismo nombre y valor.
+                let hidden = form.querySelector('input[type="hidden"][name="globalsearch"]');
+                if (!hidden) {
+                    hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = 'globalsearch';
+                    form.appendChild(hidden);
+                }
+                hidden.value = value;
+
+                // Asegurarnos de que el input visible no esté deshabilitado
+                searchInput.disabled = false;
+            }
+
+            // Mostrar loader
+            if (modalLoader) {
+                modalLoader.classList.remove('d-none');
+            }
+
+            // Desactivar solo los botones para evitar dobles envíos,
+            // pero mantener los inputs habilitados para que se envíen sus valores
+            const buttons = form.querySelectorAll('button');
+            buttons.forEach(function (btnEl) {
+                btnEl.disabled = true;
+            });
+
+            // Mantener el submit real (no llamar preventDefault) para que GLPI navegue a la página de resultados
+        });
+    }
 });
 
 
