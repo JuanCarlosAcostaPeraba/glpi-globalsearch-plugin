@@ -178,6 +178,113 @@
     }
 
     /**
+     * Detectar si una columna es de tipo fecha
+     */
+    function isDateColumn(headerText, table, columnIndex) {
+        const text = headerText.trim().toLowerCase();
+        const dateKeywords = ['date', 'fecha', 'update', 'actualización', 'created', 'creado', 'modified', 'modificado', 'time', 'tiempo'];
+
+        // Verificar por palabras clave en el header
+        const hasDateKeyword = dateKeywords.some(function (keyword) {
+            return text.includes(keyword);
+        });
+
+        if (hasDateKeyword) {
+            return true;
+        }
+
+        // Opcionalmente verificar el contenido de las celdas para confirmar formato de fecha
+        const tbody = table.querySelector('tbody');
+        if (tbody) {
+            const sampleRows = Array.from(tbody.querySelectorAll('tr:not(.no-results)')).slice(0, 5);
+            let dateCount = 0;
+
+            sampleRows.forEach(function (row) {
+                const cells = row.querySelectorAll('td');
+                if (cells[columnIndex]) {
+                    const cellText = getCellText(cells[columnIndex]).trim();
+                    if (parseDateIgnoreTime(cellText) !== null) {
+                        dateCount++;
+                    }
+                }
+            });
+
+            // Si al menos 3 de 5 muestras son fechas, considerar la columna como fecha
+            return dateCount >= 3;
+        }
+
+        return false;
+    }
+
+    /**
+     * Parsear fecha ignorando horas (solo año, mes y día)
+     */
+    function parseDateIgnoreTime(cellText) {
+        if (!cellText || cellText.trim() === '') {
+            return null;
+        }
+
+        const text = cellText.trim();
+        let date = null;
+
+        // Intentar múltiples formatos de fecha comunes
+        // Formato YYYY-MM-DD (ISO)
+        if (/^\d{4}-\d{2}-\d{2}/.test(text)) {
+            const match = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (match) {
+                date = new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+                if (!isNaN(date.getTime())) {
+                    return date;
+                }
+            }
+        }
+
+        // Formato DD/MM/YYYY
+        if (/^\d{2}\/\d{2}\/\d{4}/.test(text)) {
+            const match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+            if (match) {
+                date = new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
+                if (!isNaN(date.getTime())) {
+                    return date;
+                }
+            }
+        }
+
+        // Formato MM/DD/YYYY
+        if (/^\d{2}\/\d{2}\/\d{4}/.test(text)) {
+            const match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+            if (match) {
+                date = new Date(parseInt(match[3]), parseInt(match[1]) - 1, parseInt(match[2]));
+                if (!isNaN(date.getTime())) {
+                    return date;
+                }
+            }
+        }
+
+        // Intentar parseo directo con Date (puede manejar varios formatos)
+        date = new Date(text);
+        if (!isNaN(date.getTime())) {
+            // Normalizar a medianoche para ignorar horas
+            date.setHours(0, 0, 0, 0);
+            return date;
+        }
+
+        return null;
+    }
+
+    /**
+     * Normalizar fecha a medianoche (00:00:00) para comparación
+     */
+    function normalizeDateToMidnight(date) {
+        if (!date || !(date instanceof Date)) {
+            return null;
+        }
+        const normalized = new Date(date);
+        normalized.setHours(0, 0, 0, 0);
+        return normalized;
+    }
+
+    /**
      * Filtros de tabla
      */
     function initFilters(table) {
@@ -218,6 +325,44 @@
                     select.appendChild(option);
                 });
                 filterCell.appendChild(select);
+            } else if (isDateColumn(th.textContent, table, index)) {
+                // Contenedor para rango de fechas
+                const dateRangeContainer = document.createElement('div');
+                dateRangeContainer.className = 'filter-date-range';
+                dateRangeContainer.setAttribute('data-column-index', index);
+
+                // Input "Desde"
+                const fromLabel = document.createElement('label');
+                fromLabel.className = 'filter-date-label';
+                fromLabel.textContent = 'Desde:';
+                fromLabel.setAttribute('for', 'filter-date-from-' + index);
+
+                const fromInput = document.createElement('input');
+                fromInput.type = 'date';
+                fromInput.className = 'form-control form-control-sm filter-input filter-date-input';
+                fromInput.id = 'filter-date-from-' + index;
+                fromInput.setAttribute('data-column-index', index);
+                fromInput.setAttribute('data-date-type', 'from');
+
+                // Input "Hasta"
+                const toLabel = document.createElement('label');
+                toLabel.className = 'filter-date-label';
+                toLabel.textContent = 'Hasta:';
+                toLabel.setAttribute('for', 'filter-date-to-' + index);
+
+                const toInput = document.createElement('input');
+                toInput.type = 'date';
+                toInput.className = 'form-control form-control-sm filter-input filter-date-input';
+                toInput.id = 'filter-date-to-' + index;
+                toInput.setAttribute('data-column-index', index);
+                toInput.setAttribute('data-date-type', 'to');
+
+                dateRangeContainer.appendChild(fromLabel);
+                dateRangeContainer.appendChild(fromInput);
+                dateRangeContainer.appendChild(toLabel);
+                dateRangeContainer.appendChild(toInput);
+
+                filterCell.appendChild(dateRangeContainer);
             } else {
                 const input = document.createElement('input');
                 input.type = 'text';
@@ -278,6 +423,14 @@
                 }
             });
         });
+
+        // Para inputs de fecha, aplicar filtros automáticamente al cambiar
+        const dateInputs = filterRow.querySelectorAll('.filter-date-input');
+        dateInputs.forEach(function (input) {
+            input.addEventListener('change', function () {
+                applyFilters(table);
+            });
+        });
     }
 
     /**
@@ -312,21 +465,66 @@
             return;
         }
 
-        // Solo tener en cuenta filtros activos (no vacíos y no deshabilitados / ocultos)
-        const filterInputs = Array.from(allFilterInputs).filter(function (input) {
-            if (input.disabled) return false;
-            if (!input.value || input.value.trim() === '') return false;
+        // Recopilar filtros activos (incluyendo rangos de fechas)
+        const activeFilters = [];
+
+        // Agrupar inputs de fecha por columna
+        const dateFiltersByColumn = {};
+        const dateRangeContainers = table.querySelectorAll('.filter-date-range');
+        dateRangeContainers.forEach(function (container) {
+            const columnIndex = parseInt(container.getAttribute('data-column-index'));
+            const fromInput = container.querySelector('input[data-date-type="from"]');
+            const toInput = container.querySelector('input[data-date-type="to"]');
+
+            const cell = container.closest('td');
+            if (cell && (cell.offsetParent === null || getComputedStyle(cell).display === 'none')) {
+                return; // La columna está oculta
+            }
+
+            const fromValue = fromInput ? fromInput.value.trim() : '';
+            const toValue = toInput ? toInput.value.trim() : '';
+
+            // Si al menos uno de los dos tiene valor, considerar el filtro activo
+            if (fromValue || toValue) {
+                dateFiltersByColumn[columnIndex] = {
+                    type: 'date',
+                    from: fromValue,
+                    to: toValue,
+                    columnIndex: columnIndex
+                };
+            }
+        });
+
+        // Recopilar filtros de texto/select normales
+        Array.from(allFilterInputs).forEach(function (input) {
+            if (input.disabled) return;
+
+            // Ignorar inputs de fecha (ya los procesamos arriba)
+            if (input.classList.contains('filter-date-input')) {
+                return;
+            }
+
+            if (!input.value || input.value.trim() === '') return;
 
             const cell = input.closest('td');
             if (cell && (cell.offsetParent === null || getComputedStyle(cell).display === 'none')) {
                 // La columna está oculta, no aplicar este filtro
-                return false;
+                return;
             }
-            return true;
+
+            activeFilters.push({
+                type: 'text',
+                input: input,
+                columnIndex: parseInt(input.getAttribute('data-column-index')),
+                value: input.value.trim()
+            });
         });
 
+        // Combinar todos los filtros activos
+        const allActiveFilters = activeFilters.concat(Object.values(dateFiltersByColumn));
+
         // Si no hay filtros activos, mostrar todas las filas y restaurar paginación
-        if (filterInputs.length === 0) {
+        if (allActiveFilters.length === 0) {
             // Obtener todas las filas válidas
             let allRows = Array.from(tbody.querySelectorAll('tr'));
             let rows = allRows.filter(function (row) {
@@ -371,13 +569,47 @@
             let showRow = true;
             const cells = row.querySelectorAll('td');
 
-            filterInputs.forEach(function (input) {
-                const columnIndex = parseInt(input.getAttribute('data-column-index'));
-                const filterValue = input.value.trim().toLowerCase();
+            allActiveFilters.forEach(function (filter) {
+                const columnIndex = filter.columnIndex;
                 const cell = cells[columnIndex];
 
-                if (filterValue && cell) {
-                    // Obtener texto de la celda (sin HTML)
+                if (!cell) {
+                    showRow = false;
+                    return;
+                }
+
+                if (filter.type === 'date') {
+                    // Filtrado por rango de fechas
+                    const cellText = getCellText(cell).trim();
+                    const cellDate = parseDateIgnoreTime(cellText);
+
+                    if (cellDate === null) {
+                        // Si la celda no contiene una fecha válida, ocultar la fila
+                        showRow = false;
+                        return;
+                    }
+
+                    const normalizedCellDate = normalizeDateToMidnight(cellDate);
+
+                    // Aplicar lógica de rango
+                    if (filter.from) {
+                        const fromDate = normalizeDateToMidnight(new Date(filter.from));
+                        if (normalizedCellDate < fromDate) {
+                            showRow = false;
+                            return;
+                        }
+                    }
+
+                    if (filter.to) {
+                        const toDate = normalizeDateToMidnight(new Date(filter.to));
+                        if (normalizedCellDate > toDate) {
+                            showRow = false;
+                            return;
+                        }
+                    }
+                } else {
+                    // Filtrado de texto normal
+                    const filterValue = filter.value.toLowerCase();
                     const cellText = getCellText(cell).trim().toLowerCase();
                     if (!cellText.includes(filterValue)) {
                         showRow = false;
@@ -705,15 +937,30 @@
             if (filterCell) {
                 filterCell.style.display = isVisible ? '' : 'none';
 
-                const filterInput = filterCell.querySelector('.filter-input');
-                if (filterInput) {
-                    if (isVisible) {
-                        // Volver a habilitar filtro cuando la columna se muestra
-                        filterInput.disabled = false;
-                    } else {
-                        // Limpiar y deshabilitar filtro cuando la columna se oculta
-                        filterInput.value = '';
-                        filterInput.disabled = true;
+                // Manejar inputs de fecha (rango)
+                const dateRangeContainer = filterCell.querySelector('.filter-date-range');
+                if (dateRangeContainer) {
+                    const dateInputs = dateRangeContainer.querySelectorAll('.filter-date-input');
+                    dateInputs.forEach(function (input) {
+                        if (isVisible) {
+                            input.disabled = false;
+                        } else {
+                            input.value = '';
+                            input.disabled = true;
+                        }
+                    });
+                } else {
+                    // Manejar inputs normales (texto o select)
+                    const filterInput = filterCell.querySelector('.filter-input');
+                    if (filterInput) {
+                        if (isVisible) {
+                            // Volver a habilitar filtro cuando la columna se muestra
+                            filterInput.disabled = false;
+                        } else {
+                            // Limpiar y deshabilitar filtro cuando la columna se oculta
+                            filterInput.value = '';
+                            filterInput.disabled = true;
+                        }
                     }
                 }
             }
