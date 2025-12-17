@@ -308,9 +308,4 @@ setTimeout(hideBackendLoader, 50);
 </script>
 
 {# Incluir script JavaScript de funcionalidades mejoradas #}
-<script>
-	console.log('GlobalSearch: Template loaded, plugin_webroot =   {{ plugin_webroot }}');
-console.log('GlobalSearch: Script will load from:   {{ plugin_webroot }}/public/js/globalsearch_enhanced.js');
-console.log('GlobalSearch: Tables found:', document.querySelectorAll('.search-results-table').length);
-</script>
 <script src="{{ plugin_webroot }}/public/js/globalsearch_enhanced.js" onerror="console.error('GlobalSearch: Failed to load script')" onload="console.log('GlobalSearch: Script loaded successfully')"></script>
