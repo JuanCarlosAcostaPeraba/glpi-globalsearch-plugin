@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2024-12-XX
+
+### Security
+- Enhanced entity permission handling and validation
+- Improved security checks for entity access control
+- Strengthened entity restrictions to prevent unauthorized access
+- Additional security measures for GLPI entity system compliance
+
+### Fixed
+- Fixed entity permission edge cases in search results
+- Improved entity recursive permission handling
+- Enhanced security validation for entity-aware searches
+
 ## [2.0.0] - 2024-12-XX
 
 ### Added
@@ -32,5 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - For GLPI 10.x compatibility, please use version 1.5.1
 - PHP 8.1+ is required
 
+[2.1.0]: https://github.com/JuanCarlosAcostaPeraba/glpi-globalsearch-plugin/releases/tag/v2.1.0
 [2.0.0]: https://github.com/JuanCarlosAcostaPeraba/glpi-globalsearch-plugin/releases/tag/v2.0.0
 

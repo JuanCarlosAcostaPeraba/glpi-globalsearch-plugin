@@ -6,7 +6,7 @@ if (!defined('GLPI_ROOT')) {
     die('Direct access not allowed');
 }
 
-define('GLOBALSEARCH_VERSION', '2.0.0');
+define('GLOBALSEARCH_VERSION', '2.1.0');
 define('GLOBALSEARCH_MIN_GLPI', '11.0.0');
 define('GLOBALSEARCH_MAX_GLPI', '11.0.99');
 
