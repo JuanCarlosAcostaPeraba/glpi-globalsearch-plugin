@@ -182,6 +182,17 @@
      */
     function isDateColumn(headerText, table, columnIndex) {
         const text = headerText.trim().toLowerCase();
+        
+        // Excluir explícitamente columnas de ID
+        const excludeKeywords = ['id', 'identificador'];
+        const hasExcludeKeyword = excludeKeywords.some(function (keyword) {
+            return text === keyword || text === keyword + 's';
+        });
+        
+        if (hasExcludeKeyword) {
+            return false;
+        }
+        
         const dateKeywords = ['date', 'fecha', 'update', 'actualización', 'created', 'creado', 'modified', 'modificado', 'time', 'tiempo'];
 
         // Verificar por palabras clave en el header
@@ -189,30 +200,44 @@
             return text.includes(keyword);
         });
 
+        // Si el header tiene palabras clave de fecha, verificar el contenido para confirmar
         if (hasDateKeyword) {
-            return true;
-        }
-
-        // Opcionalmente verificar el contenido de las celdas para confirmar formato de fecha
-        const tbody = table.querySelector('tbody');
-        if (tbody) {
-            const sampleRows = Array.from(tbody.querySelectorAll('tr:not(.no-results)')).slice(0, 5);
-            let dateCount = 0;
-
-            sampleRows.forEach(function (row) {
-                const cells = row.querySelectorAll('td');
-                if (cells[columnIndex]) {
-                    const cellText = getCellText(cells[columnIndex]).trim();
-                    if (parseDateIgnoreTime(cellText) !== null) {
-                        dateCount++;
-                    }
+            const tbody = table.querySelector('tbody');
+            if (tbody) {
+                const sampleRows = Array.from(tbody.querySelectorAll('tr:not(.no-results)')).slice(0, 5);
+                if (sampleRows.length === 0) {
+                    return true; // Si no hay filas, confiar en el header
                 }
-            });
+                
+                let dateCount = 0;
+                let totalSamples = 0;
 
-            // Si al menos 3 de 5 muestras son fechas, considerar la columna como fecha
-            return dateCount >= 3;
+                sampleRows.forEach(function (row) {
+                    const cells = row.querySelectorAll('td');
+                    if (cells[columnIndex]) {
+                        const cellText = getCellText(cells[columnIndex]).trim();
+                        // Ignorar valores que son solo números (probablemente IDs)
+                        if (cellText && !/^\d+$/.test(cellText)) {
+                            totalSamples++;
+                            if (parseDateIgnoreTime(cellText) !== null) {
+                                dateCount++;
+                            }
+                        }
+                    }
+                });
+
+                // Si hay muestras válidas y al menos la mitad son fechas, confirmar como fecha
+                if (totalSamples > 0 && dateCount >= Math.ceil(totalSamples / 2)) {
+                    return true;
+                }
+                // Si no hay muestras válidas pero el header tiene palabra clave de fecha, confiar en el header
+                return totalSamples === 0;
+            }
+            return true; // Si no hay tbody, confiar en el header
         }
 
+        // Si el header NO tiene palabras clave de fecha, no considerar la columna como fecha
+        // (evita falsos positivos cuando valores numéricos coinciden casualmente con formatos de fecha)
         return false;
     }
 
