@@ -45,7 +45,7 @@ function plugin_version_globalsearch()
         'version' => GLOBALSEARCH_VERSION,
         'author' => 'Juan Carlos Acosta Perabá',
         'license' => 'GPLv3+',
-        'homepage' => 'https://github.com/JuanCarlosAcostaPeraba',
+        'homepage' => 'https://github.com/JuanCarlosAcostaPeraba/glpi-globalsearch-plugin',
         'requirements' => [
             'glpi' => [
                 'min' => '11.0.0',

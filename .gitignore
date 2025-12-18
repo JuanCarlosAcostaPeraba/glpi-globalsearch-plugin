@@ -1,3 +1,36 @@
+# OS Files
 .DS_Store
+Thumbs.db
+desktop.ini
 
+# Build artifacts
+build/
 *.zip
+*.tar.gz
+
+# Dependencies
+node_modules/
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# PHP
+composer.phar
+composer.lock
