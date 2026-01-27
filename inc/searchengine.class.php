@@ -22,7 +22,7 @@ class PluginGlobalsearchSearchEngine
         if ($raw !== '' && mb_substr($raw, 0, 1) === '#') {
             $id = trim(mb_substr($raw, 1));
             if (is_numeric($id)) {
-                $this->id_only   = true;
+                $this->id_only = true;
                 $this->raw_query = $id;
                 return;
             }
@@ -127,20 +127,20 @@ class PluginGlobalsearchSearchEngine
                 'glpi_users.firstname',
                 'glpi_users.realname'
             ],
-            'FROM'   => 'glpi_tickets_users',
+            'FROM' => 'glpi_tickets_users',
             'INNER JOIN' => [
                 'glpi_users' => [
                     'ON' => [
                         'glpi_tickets_users' => 'users_id',
-                        'glpi_users'         => 'id'
+                        'glpi_users' => 'id'
                     ]
                 ]
             ],
-            'WHERE'  => [
+            'WHERE' => [
                 'glpi_tickets_users.tickets_id' => $ticket_id,
-                'glpi_tickets_users.type'       => 2  // 2 = Assigned technician
+                'glpi_tickets_users.type' => 2  // 2 = Assigned technician
             ],
-            'LIMIT'  => 1
+            'LIMIT' => 1
         ];
 
         $iterator = $DB->request($criteria);
@@ -166,25 +166,38 @@ class PluginGlobalsearchSearchEngine
      */
     private function getMultiWordCriteria(array $fields)
     {
-        // Dividir por espacios
-        $words = explode(' ', $this->raw_query);
+        // Regex para encontrar "frases literales" o palabras sueltas.
+        // Captura el contenido entre comillas en el primer grupo o palabras sin comillas en el segundo.
+        preg_match_all('/"([^"]+)"|(\S+)/', $this->raw_query, $matches);
 
-        // Eliminar palabras vacías y espacios extra
-        $words = array_filter($words, function ($w) {
-            return mb_strlen(trim($w)) > 0;
-        });
+        $terms = [];
+        foreach ($matches[1] as $key => $phrase) {
+            if ($phrase !== '') {
+                // Es una frase entre comillas
+                $terms[] = $phrase;
+            } else {
+                // Es una palabra suelta (o una comilla mal cerrada)
+                $term = $matches[2][$key];
+                if ($term !== '') {
+                    // Si el término es solo una comilla ("), lo ignoramos para evitar LIKE '%%%'
+                    if ($term !== '"') {
+                        $terms[] = $term;
+                    }
+                }
+            }
+        }
 
-        if (empty($words)) {
+        if (empty($terms)) {
             return [];
         }
 
         $and_criteria = [];
 
-        foreach ($words as $word) {
-            // Cada palabra debe encontrarse en ALGUNO de los campos (OR)
+        foreach ($terms as $term) {
+            // Cada término (palabra o frase) debe encontrarse en ALGUNO de los campos (OR)
             $or_criteria = [];
             foreach ($fields as $field) {
-                $or_criteria[$field] = ['LIKE', '%' . $word . '%'];
+                $or_criteria[$field] = ['LIKE', '%' . $term . '%'];
             }
             // Agregamos este bloque OR al bloque principal AND
             $and_criteria[] = ['OR' => $or_criteria];
@@ -337,9 +350,9 @@ class PluginGlobalsearchSearchEngine
                 'glpi_tickets.closedate',
                 'glpi_tickets.date_mod'
             ],
-            'FROM'   => 'glpi_tickets',
-            'WHERE'  => $common_where,
-            'ORDER'  => 'glpi_tickets.date_mod DESC'
+            'FROM' => 'glpi_tickets',
+            'WHERE' => $common_where,
+            'ORDER' => 'glpi_tickets.date_mod DESC'
         ]);
 
         $tickets = [];
@@ -350,7 +363,7 @@ class PluginGlobalsearchSearchEngine
             // Verificar permisos antes de agregar
             if ($ticket_obj->can($row['id'], READ)) {
                 $row['status_name'] = Ticket::getStatus($row['status']);
-                $row['tech_name']   = __('Not assigned'); // Valor inicial
+                $row['tech_name'] = __('Not assigned'); // Valor inicial
                 $row['requester_name'] = __('Not assigned'); // Valor inicial
                 $tickets[$row['id']] = $row;
                 $ticket_ids[] = $row['id'];
@@ -366,7 +379,7 @@ class PluginGlobalsearchSearchEngine
                     'glpi_users.realname',
                     'glpi_users.name AS uname'
                 ],
-                'FROM'   => 'glpi_tickets_users',
+                'FROM' => 'glpi_tickets_users',
                 'INNER JOIN' => [
                     'glpi_users' => [
                         'ON' => ['glpi_tickets_users' => 'users_id', 'glpi_users' => 'id']
@@ -374,7 +387,7 @@ class PluginGlobalsearchSearchEngine
                 ],
                 'WHERE' => [
                     'glpi_tickets_users.tickets_id' => $ticket_ids,
-                    'glpi_tickets_users.type'       => 2 // Assigned
+                    'glpi_tickets_users.type' => 2 // Assigned
                 ]
             ]);
 
@@ -410,7 +423,7 @@ class PluginGlobalsearchSearchEngine
                     'glpi_users.realname',
                     'glpi_users.name AS uname'
                 ],
-                'FROM'   => 'glpi_tickets_users',
+                'FROM' => 'glpi_tickets_users',
                 'INNER JOIN' => [
                     'glpi_users' => [
                         'ON' => ['glpi_tickets_users' => 'users_id', 'glpi_users' => 'id']
@@ -418,7 +431,7 @@ class PluginGlobalsearchSearchEngine
                 ],
                 'WHERE' => [
                     'glpi_tickets_users.tickets_id' => $ticket_ids,
-                    'glpi_tickets_users.type'       => 1 // Requester
+                    'glpi_tickets_users.type' => 1 // Requester
                 ]
             ]);
 
@@ -508,17 +521,17 @@ class PluginGlobalsearchSearchEngine
                 'glpi_users.realname AS requester_realname',
                 'glpi_users.name AS requester_uname'
             ],
-            'FROM'   => 'glpi_projects',
+            'FROM' => 'glpi_projects',
             'LEFT JOIN' => [
                 'glpi_users' => [
                     'ON' => ['glpi_projects' => 'users_id', 'glpi_users' => 'id']
                 ]
             ],
-            'WHERE'  => array_merge(
+            'WHERE' => array_merge(
                 $where,
                 $entity_criteria
             ),
-            'ORDER'  => 'glpi_projects.date_mod DESC'
+            'ORDER' => 'glpi_projects.date_mod DESC'
         ];
 
         $iterator = $DB->request($criteria);
@@ -592,15 +605,15 @@ class PluginGlobalsearchSearchEngine
                 'glpi_documents.date_mod',
                 'glpi_documents.documentcategories_id'
             ],
-            'FROM'   => 'glpi_documents',
-            'WHERE'  => array_merge(
+            'FROM' => 'glpi_documents',
+            'WHERE' => array_merge(
                 $where,
                 [
                     'glpi_documents.is_deleted' => 0
                 ],
                 $entity_criteria
             ),
-            'ORDER'  => 'glpi_documents.date_mod DESC'
+            'ORDER' => 'glpi_documents.date_mod DESC'
         ];
 
         $iterator = $DB->request($criteria);
@@ -670,8 +683,8 @@ class PluginGlobalsearchSearchEngine
                 'glpi_softwares.date_mod',
                 'glpi_softwares.manufacturers_id'
             ],
-            'FROM'   => 'glpi_softwares',
-            'WHERE'  => array_merge(
+            'FROM' => 'glpi_softwares',
+            'WHERE' => array_merge(
                 $where,
                 [
                     'glpi_softwares.is_deleted' => 0,
@@ -679,7 +692,7 @@ class PluginGlobalsearchSearchEngine
                 ],
                 $entity_criteria
             ),
-            'ORDER'  => 'glpi_softwares.date_mod DESC'
+            'ORDER' => 'glpi_softwares.date_mod DESC'
         ];
 
         $iterator = $DB->request($criteria);
@@ -751,16 +764,16 @@ class PluginGlobalsearchSearchEngine
                 'glpi_users.mobile',
                 'glpi_users.date_mod'
             ],
-            'FROM'   => 'glpi_users',
-            'WHERE'  => array_merge(
+            'FROM' => 'glpi_users',
+            'WHERE' => array_merge(
                 $where,
                 ['glpi_users.is_deleted' => 0]
             ),
-            'ORDER'  => 'glpi_users.date_mod DESC'
+            'ORDER' => 'glpi_users.date_mod DESC'
         ];
 
         $iterator = $DB->request($criteria);
-        $results  = [];
+        $results = [];
 
         foreach ($iterator as $row) {
             // Verificar permisos adicionales
@@ -836,7 +849,7 @@ class PluginGlobalsearchSearchEngine
         $private_criteria = [
             'OR' => [
                 'glpi_tickettasks.is_private' => 0,
-                'glpi_tickettasks.users_id'   => $user_id
+                'glpi_tickettasks.users_id' => $user_id
             ]
         ];
 
@@ -859,12 +872,12 @@ class PluginGlobalsearchSearchEngine
                 'glpi_users.realname AS requester_realname',
                 'glpi_users.name AS requester_uname'
             ],
-            'FROM'   => 'glpi_tickettasks',
+            'FROM' => 'glpi_tickettasks',
             'INNER JOIN' => [
                 'glpi_tickets' => [
                     'ON' => [
                         'glpi_tickettasks' => 'tickets_id',
-                        'glpi_tickets'     => 'id'
+                        'glpi_tickets' => 'id'
                     ]
                 ],
                 'glpi_tickets_users' => [
@@ -880,14 +893,14 @@ class PluginGlobalsearchSearchEngine
                     ]
                 ]
             ],
-            'WHERE'  => array_merge(
+            'WHERE' => array_merge(
                 $where_criteria,
                 [
                     'glpi_tickets_users.type' => 1, // Requester
                     $private_criteria
                 ]
             ),
-            'ORDER'  => 'glpi_tickettasks.date_mod DESC'
+            'ORDER' => 'glpi_tickettasks.date_mod DESC'
         ];
 
         $iterator = $DB->request($criteria);
@@ -974,13 +987,13 @@ class PluginGlobalsearchSearchEngine
 
         $criteria = [
             'SELECT' => $select,
-            'FROM'   => 'glpi_projecttasks',
+            'FROM' => 'glpi_projecttasks',
             'LEFT JOIN' => [
                 'glpi_users' => [
                     'ON' => ['glpi_projecttasks' => 'users_id', 'glpi_users' => 'id']
                 ]
             ],
-            'WHERE'  => array_merge(
+            'WHERE' => array_merge(
                 $where,
                 [
                     'glpi_projecttasks.is_template' => 0
@@ -989,11 +1002,11 @@ class PluginGlobalsearchSearchEngine
                 $has_private_field ? [
                     'OR' => [
                         'glpi_projecttasks.is_private' => 0,
-                        'glpi_projecttasks.users_id'   => Session::getLoginUserID()
+                        'glpi_projecttasks.users_id' => Session::getLoginUserID()
                     ]
                 ] : []
             ),
-            'ORDER'  => 'glpi_projecttasks.date_mod DESC'
+            'ORDER' => 'glpi_projecttasks.date_mod DESC'
         ];
 
         $iterator = $DB->request($criteria);
