@@ -63,10 +63,13 @@ Available options:
 
 ### Search
 
-* Uses multi-word "Google-style" search - all words must appear in results
-* Smart numeric search - numeric queries search both by ID and within content (e.g., "5457" finds items with ID 5457 AND items containing "5457" in their content like "5457T")
-* Searches in closed/resolved items
-* Results sorted by modification date
+* **Multi-word search**: "Google-style" logic - all words must appear in results.
+* **Literal phrases**: Use double quotes (e.g., `"router cisco"`) to search for exact text matches.
+* **Smart ID search**:
+    * Numeric queries find both IDs and content (e.g., `5457` finds ID 5457 and items containing "5457").
+    * Use the `#` prefix (e.g., `#123`) to force a search **only by ID**, which is faster and more precise.
+* **Closed/Resolved**: Searches include closed tickets and resolved projects.
+* **Sorting**: Results are ranked by modification date.
 
 ## 🏗️ Plugin Structure
 

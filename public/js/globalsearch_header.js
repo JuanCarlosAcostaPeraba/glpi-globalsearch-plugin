@@ -63,6 +63,12 @@ document.addEventListener('DOMContentLoaded', function () {
                                    autofocus />
                         </div>
                     </div>
+                    <div class="mb-3">
+                        <div class="text-muted">
+                            <i class="ti ti-info-circle me-1"></i>
+                            Busca por <strong>ID</strong> (ej: <code>#123</code>), <strong>frases exactas</strong> (ej: <code>"servidor web"</code>) o <strong>palabras</strong> sueltas.
+                        </div>
+                    </div>
                     <div class="d-flex justify-content-end align-items-center gap-2">
                         <div class="me-auto d-none align-items-center gap-2 text-muted small globalsearch-modal-loader">
                             <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
