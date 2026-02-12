@@ -49,6 +49,7 @@
                     initPagination(table);
                     initFilters(table);
                     initColumnToggle(table);
+                    initSorting(table);
                     applyHighlight(table);
                 } catch (e) {
                     console.error('GlobalSearch: Error initializing table', e);
@@ -57,6 +58,106 @@
         } catch (e) {
             console.error('GlobalSearch: Error in initAllTables', e);
         }
+    }
+
+    /**
+     * Inicializar ordenación de columnas
+     */
+    function initSorting(table) {
+        const thead = table.querySelector('thead');
+        if (!thead) return;
+
+        const headerRow = thead.querySelector('tr:not(.table-filters):not(.table-filters-actions)');
+        if (!headerRow) return;
+
+        const headers = headerRow.querySelectorAll('th');
+        headers.forEach(function (th, index) {
+            th.addEventListener('click', function () {
+                const currentOrder = th.classList.contains('sort-asc') ? 'desc' : 'asc';
+
+                // Limpiar clases de ordenación de todos los headers
+                headers.forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+
+                // Aplicar clase al seleccionado
+                th.classList.add('sort-' + currentOrder);
+
+                sortRows(table, index, currentOrder);
+            });
+        });
+    }
+
+    /**
+     * Ordenar filas de la tabla
+     */
+    function sortRows(table, columnIndex, order) {
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+
+        // Obtener todas las filas de datos válidas
+        let allRows = Array.from(tbody.querySelectorAll('tr'));
+        let rows = allRows.filter(function (row) {
+            const cells = row.querySelectorAll('td');
+            const hasCells = cells.length > 0;
+            const isNoResults = row.classList.contains('no-results') ||
+                row.textContent.trim().toLowerCase().includes('no results');
+            return hasCells && !isNoResults;
+        });
+
+        const isDate = isDateColumn(table.querySelectorAll('thead th')[columnIndex].textContent, table, columnIndex);
+
+        rows.sort(function (a, b) {
+            const cellA = a.querySelectorAll('td')[columnIndex];
+            const cellB = b.querySelectorAll('td')[columnIndex];
+
+            let valA = getCellText(cellA).trim();
+            let valB = getCellText(cellB).trim();
+
+            let comparison = 0;
+
+            if (isDate) {
+                const dateA = parseDateIgnoreTime(valA) || new Date(0);
+                const dateB = parseDateIgnoreTime(valB) || new Date(0);
+                comparison = dateA - dateB;
+            } else {
+                // Comprobar si son IDs (formato #123)
+                const idA = valA.startsWith('#') ? parseInt(valA.substring(1)) : NaN;
+                const idB = valB.startsWith('#') ? parseInt(valB.substring(1)) : NaN;
+
+                if (!isNaN(idA) && !isNaN(idB)) {
+                    comparison = idA - idB;
+                } else {
+                    // Ordenación alfabética normal
+                    comparison = valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
+                }
+            }
+
+            return order === 'asc' ? comparison : -comparison;
+        });
+
+        // Re-insertar filas ordenadas en el DOM
+        rows.forEach(row => tbody.appendChild(row));
+
+        // Actualizar paginación si existe
+        if (table._pagination) {
+            // Si hay filtros activos, usar la lógica de filtros para obtener las filas visibles
+            const activeFilters = table.querySelectorAll('.filter-input');
+            let hasActiveFilter = false;
+            activeFilters.forEach(input => {
+                if (input.value && input.value.trim() !== '') hasActiveFilter = true;
+            });
+
+            if (hasActiveFilter) {
+                // Re-aplicar filtros para mantener el estado
+                applyFilters(table);
+            } else {
+                // Solo actualizar las filas originales y mostrar primera página
+                table._pagination.getRows = () => rows;
+                table._pagination.showPage(0);
+            }
+        }
+
+        // Re-aplicar resaltado
+        applyHighlight(table);
     }
 
     /**
@@ -182,17 +283,17 @@
      */
     function isDateColumn(headerText, table, columnIndex) {
         const text = headerText.trim().toLowerCase();
-        
+
         // Excluir explícitamente columnas de ID
         const excludeKeywords = ['id', 'identificador'];
         const hasExcludeKeyword = excludeKeywords.some(function (keyword) {
             return text === keyword || text === keyword + 's';
         });
-        
+
         if (hasExcludeKeyword) {
             return false;
         }
-        
+
         const dateKeywords = ['date', 'fecha', 'update', 'actualización', 'created', 'creado', 'modified', 'modificado', 'time', 'tiempo'];
 
         // Verificar por palabras clave en el header
@@ -208,7 +309,7 @@
                 if (sampleRows.length === 0) {
                     return true; // Si no hay filas, confiar en el header
                 }
-                
+
                 let dateCount = 0;
                 let totalSamples = 0;
 

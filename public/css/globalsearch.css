@@ -86,3 +86,43 @@ form[action*="front/search.php"][role="search"][data-submit-once] {
 .table-filters .filter-date-range {
     padding: 0.25rem 0;
 }
+
+/* Ordenación de tablas */
+.search-results-table th {
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+    transition: background-color 0.2s;
+}
+
+.search-results-table th:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.search-results-table th::after {
+    content: '\f0dc';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    position: absolute;
+    right: 0.5rem;
+    color: #ced4da;
+    font-size: 0.75rem;
+    opacity: 0.5;
+}
+
+.search-results-table th.sort-asc::after {
+    content: '\f0de';
+    color: #007bff;
+    opacity: 1;
+}
+
+.search-results-table th.sort-desc::after {
+    content: '\f0dd';
+    color: #007bff;
+    opacity: 1;
+}
+
+/* Ajuste para que el icono no pise el texto */
+.search-results-table th {
+    padding-right: 1.5rem !important;
+}
