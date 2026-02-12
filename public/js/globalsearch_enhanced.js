@@ -43,6 +43,11 @@
 
             tables.forEach(function (table) {
                 try {
+                    // Evitar doble inicialización
+                    if (table.classList.contains('initialized')) {
+                        return;
+                    }
+
                     const tableId = table.getAttribute('id') || 'table-' + Math.random().toString(36).substr(2, 9);
                     table.setAttribute('id', tableId);
 
@@ -51,6 +56,8 @@
                     initColumnToggle(table);
                     initSorting(table);
                     applyHighlight(table);
+
+                    table.classList.add('initialized');
                 } catch (e) {
                     console.error('GlobalSearch: Error initializing table', e);
                 }
