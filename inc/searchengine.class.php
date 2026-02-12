@@ -203,7 +203,9 @@ class PluginGlobalsearchSearchEngine
             $and_criteria[] = ['OR' => $or_criteria];
         }
 
-        return ['AND' => $and_criteria];
+        // Si solo hay un término, devolvemos el OR directamente para aplanar el SQL.
+        // Si hay varios, los envolvemos en un AND.
+        return (count($and_criteria) === 1) ? $and_criteria[0] : ['AND' => $and_criteria];
     }
 
     /**
@@ -307,37 +309,50 @@ class PluginGlobalsearchSearchEngine
         $where = [];
         $search_fields = ['glpi_tickets.name', 'glpi_tickets.content'];
 
-        if (is_numeric($this->raw_query)) {
-            $id_criteria = ['glpi_tickets.id' => $this->raw_query];
-
-            if ($this->id_only) {
-                // Modo solo ID: no buscar en contenido
-                $where = $id_criteria;
-            } else {
-                // Combinar búsqueda por contenido y por ID (OR), similar a TicketTasks
-                $content_criteria = $this->getMultiWordCriteria($search_fields);
-
-                if (!empty($content_criteria)) {
-                    $where = [
-                        'OR' => [
-                            $content_criteria,
-                            $id_criteria
-                        ]
-                    ];
-                } else {
-                    $where = $id_criteria;
-                }
-            }
-        } elseif (mb_strlen($this->raw_query) >= 3) {
-            $where = $this->getMultiWordCriteria($search_fields);
+        if ($this->id_only) {
+            $where = ['glpi_tickets.id' => $this->raw_query];
         } else {
-            return [];
+            $main_criteria = [];
+            if (is_numeric($this->raw_query)) {
+                $id_criteria = ['glpi_tickets.id' => $this->raw_query];
+                $content_criteria = $this->getMultiWordCriteria($search_fields);
+                $main_criteria = !empty($content_criteria) ? ['OR' => [$id_criteria, $content_criteria]] : $id_criteria;
+            } elseif (mb_strlen($this->raw_query) >= 3) {
+                $main_criteria = $this->getMultiWordCriteria($search_fields);
+            } else {
+                return [];
+            }
+
+            // Enhanced search: match tickets if any of their tasks match the criteria
+            $task_subquery_criteria = $this->getMultiWordCriteria(['content']);
+            if (!empty($task_subquery_criteria)) {
+                $task_match = [
+                    'glpi_tickets.id' => [
+                        'IN',
+                        new QuerySubQuery([
+                            'SELECT' => 'tickets_id',
+                            'FROM' => 'glpi_tickettasks',
+                            'WHERE' => $task_subquery_criteria
+                        ])
+                    ]
+                ];
+                $where = ['OR' => array_filter([$main_criteria, $task_match])];
+            } else {
+                $where = $main_criteria;
+            }
         }
 
         // Aplicar restricciones de permisos para tickets
         $permission_criteria = $this->getTicketPermissionCriteria();
 
-        $common_where = array_merge($where, $entity_criteria, $permission_criteria, ['glpi_tickets.is_deleted' => 0]);
+        $common_where = [
+            'AND' => array_filter([
+                $where,
+                $entity_criteria,
+                $permission_criteria,
+                ['glpi_tickets.is_deleted' => 0]
+            ])
+        ];
 
         // 1. OBTENER TODOS LOS TICKETS (SIN LIMIT, SIN JOIN de técnicos para evitar duplicados)
         $iterator = $DB->request([
@@ -476,35 +491,37 @@ class PluginGlobalsearchSearchEngine
 
         $search_fields = ['glpi_projects.name', 'glpi_projects.comment', 'glpi_projects.content'];
 
-        if (is_numeric($this->raw_query)) {
-            // Criterio por ID
-            $id_criteria = ['glpi_projects.id' => $this->raw_query];
-
-            if ($this->id_only) {
-                // Modo solo ID
-                $where = $id_criteria;
-            } else {
-                // Criterio por contenido
-                $content_criteria = $this->getMultiWordCriteria($search_fields);
-
-                // Combinar ambos con OR
-                if (!empty($content_criteria)) {
-                    $where = [
-                        'OR' => [
-                            $content_criteria,
-                            $id_criteria
-                        ]
-                    ];
-                } else {
-                    $where = $id_criteria;
-                }
-            }
+        if ($this->id_only) {
+            $where = ['glpi_projects.id' => $this->raw_query];
         } else {
-            if (mb_strlen($this->raw_query) < 3) {
+            $main_criteria = [];
+            if (is_numeric($this->raw_query)) {
+                $id_criteria = ['glpi_projects.id' => $this->raw_query];
+                $content_criteria = $this->getMultiWordCriteria($search_fields);
+                $main_criteria = !empty($content_criteria) ? ['OR' => [$id_criteria, $content_criteria]] : $id_criteria;
+            } elseif (mb_strlen($this->raw_query) >= 3) {
+                $main_criteria = $this->getMultiWordCriteria($search_fields);
+            } else {
                 return [];
             }
 
-            $where = $this->getMultiWordCriteria($search_fields);
+            // Enhanced search: match projects if any of their tasks match the criteria
+            $task_subquery_criteria = $this->getMultiWordCriteria(['content', 'name']);
+            if (!empty($task_subquery_criteria)) {
+                $task_match = [
+                    'glpi_projects.id' => [
+                        'IN',
+                        new QuerySubQuery([
+                            'SELECT' => 'projects_id',
+                            'FROM' => 'glpi_projecttasks',
+                            'WHERE' => $task_subquery_criteria
+                        ])
+                    ]
+                ];
+                $where = ['OR' => array_filter([$main_criteria, $task_match])];
+            } else {
+                $where = $main_criteria;
+            }
         }
 
         $criteria = [
@@ -527,10 +544,12 @@ class PluginGlobalsearchSearchEngine
                     'ON' => ['glpi_projects' => 'users_id', 'glpi_users' => 'id']
                 ]
             ],
-            'WHERE' => array_merge(
-                $where,
-                $entity_criteria
-            ),
+            'WHERE' => [
+                'AND' => array_filter([
+                    $where,
+                    $entity_criteria
+                ])
+            ],
             'ORDER' => 'glpi_projects.date_mod DESC'
         ];
 
@@ -606,13 +625,13 @@ class PluginGlobalsearchSearchEngine
                 'glpi_documents.documentcategories_id'
             ],
             'FROM' => 'glpi_documents',
-            'WHERE' => array_merge(
-                $where,
-                [
-                    'glpi_documents.is_deleted' => 0
-                ],
-                $entity_criteria
-            ),
+            'WHERE' => [
+                'AND' => array_filter([
+                    $where,
+                    ['glpi_documents.is_deleted' => 0],
+                    $entity_criteria
+                ])
+            ],
             'ORDER' => 'glpi_documents.date_mod DESC'
         ];
 
@@ -684,14 +703,14 @@ class PluginGlobalsearchSearchEngine
                 'glpi_softwares.manufacturers_id'
             ],
             'FROM' => 'glpi_softwares',
-            'WHERE' => array_merge(
-                $where,
-                [
-                    'glpi_softwares.is_deleted' => 0,
-                    'glpi_softwares.is_template' => 0
-                ],
-                $entity_criteria
-            ),
+            'WHERE' => [
+                'AND' => array_filter([
+                    $where,
+                    ['glpi_softwares.is_deleted' => 0],
+                    ['glpi_softwares.is_template' => 0],
+                    $entity_criteria
+                ])
+            ],
             'ORDER' => 'glpi_softwares.date_mod DESC'
         ];
 
@@ -765,10 +784,12 @@ class PluginGlobalsearchSearchEngine
                 'glpi_users.date_mod'
             ],
             'FROM' => 'glpi_users',
-            'WHERE' => array_merge(
-                $where,
-                ['glpi_users.is_deleted' => 0]
-            ),
+            'WHERE' => [
+                'AND' => array_filter([
+                    $where,
+                    ['glpi_users.is_deleted' => 0]
+                ])
+            ],
             'ORDER' => 'glpi_users.date_mod DESC'
         ];
 
@@ -803,7 +824,7 @@ class PluginGlobalsearchSearchEngine
             return [];
         }
 
-        // Obtener restricciones de entidades para tickets (las tareas están vinculadas a tickets)
+        // Obtener restricciones de entidades para tickets (las tareas se vinculan a tickets)
         $entity_criteria = $this->getEntityRestrictCriteria('Ticket', 'glpi_tickets');
 
         // Campos donde buscar
@@ -822,27 +843,16 @@ class PluginGlobalsearchSearchEngine
             ];
 
             if ($this->id_only) {
-                // Modo solo ID: no buscar en contenido
                 $where_criteria = $id_criteria;
             } else {
-                // Combinar búsqueda en contenido Y búsqueda por ID con OR
-                if (!empty($content_criteria)) {
-                    $where_criteria = [
-                        'OR' => [
-                            $content_criteria,
-                            $id_criteria
-                        ]
-                    ];
-                } else {
-                    $where_criteria = $id_criteria;
-                }
+                $where_criteria = !empty($content_criteria) ? ['OR' => [$content_criteria, $id_criteria]] : $id_criteria;
             }
         } else {
+            if (mb_strlen($this->raw_query) < 3) {
+                return [];
+            }
             $where_criteria = $content_criteria;
         }
-
-        // Combinar con restricciones de entidades
-        $where_criteria = array_merge($where_criteria, $entity_criteria);
 
         // Aplicar restricciones de permisos para tareas privadas
         $user_id = Session::getLoginUserID();
@@ -852,10 +862,6 @@ class PluginGlobalsearchSearchEngine
                 'glpi_tickettasks.users_id' => $user_id
             ]
         ];
-
-        // Si el usuario tiene permiso para ver tareas privadas de otros, 
-        // no aplicar la restricción (esto se verifica con can() después)
-        // Por ahora, aplicamos la restricción básica en SQL
 
         $criteria = [
             'SELECT' => [
@@ -867,10 +873,7 @@ class PluginGlobalsearchSearchEngine
                 'glpi_tickettasks.date_mod',
                 'glpi_tickettasks.is_private',
                 'glpi_tickets.name AS ticket_name',
-                'glpi_tickets.entities_id',
-                'glpi_users.firstname AS requester_firstname',
-                'glpi_users.realname AS requester_realname',
-                'glpi_users.name AS requester_uname'
+                'glpi_tickets.entities_id'
             ],
             'FROM' => 'glpi_tickettasks',
             'INNER JOIN' => [
@@ -879,43 +882,78 @@ class PluginGlobalsearchSearchEngine
                         'glpi_tickettasks' => 'tickets_id',
                         'glpi_tickets' => 'id'
                     ]
-                ],
-                'glpi_tickets_users' => [
-                    'ON' => [
-                        'glpi_tickets' => 'id',
-                        'glpi_tickets_users' => 'tickets_id'
-                    ]
-                ],
-                'glpi_users' => [
-                    'ON' => [
-                        'glpi_tickets_users' => 'users_id',
-                        'glpi_users' => 'id'
-                    ]
                 ]
             ],
-            'WHERE' => array_merge(
-                $where_criteria,
-                [
-                    'glpi_tickets_users.type' => 1, // Requester
+            'WHERE' => [
+                'AND' => array_filter([
+                    $where_criteria,
+                    $entity_criteria,
+                    ['glpi_tickets.is_deleted' => 0],
                     $private_criteria
-                ]
-            ),
+                ])
+            ],
             'ORDER' => 'glpi_tickettasks.date_mod DESC'
         ];
 
         $iterator = $DB->request($criteria);
-        $results = [];
+        $tasks = [];
+        $ticket_ids = [];
+        $task_obj = new TicketTask();
+
         foreach ($iterator as $row) {
-            // Verificar permisos: el método can() ya verifica tareas privadas y otros permisos
-            $tickettask = new TicketTask();
-            if ($tickettask->can($row['id'], READ)) {
-                // Construir nombre del solicitante
-                $fullname = trim(($row['requester_firstname'] ?? '') . ' ' . ($row['requester_realname'] ?? ''));
-                $row['requester_name'] = $fullname ?: ($row['requester_uname'] ?? __('Unknown'));
-                $results[] = $row;
+            // Verificar permisos con can()
+            if ($task_obj->can($row['id'], READ)) {
+                $row['requester_name'] = __('Unknown'); // Valor inicial
+                $tasks[$row['id']] = $row;
+                $ticket_ids[] = $row['tickets_id'];
             }
         }
-        return $results;
+
+        // Carga masiva de solicitantes (Bulk Load)
+        if (!empty($ticket_ids)) {
+            $ticket_ids = array_unique($ticket_ids);
+            $requester_iter = $DB->request([
+                'SELECT' => [
+                    'glpi_tickets_users.tickets_id',
+                    'glpi_users.firstname',
+                    'glpi_users.realname',
+                    'glpi_users.name AS uname'
+                ],
+                'FROM' => 'glpi_tickets_users',
+                'INNER JOIN' => [
+                    'glpi_users' => [
+                        'ON' => ['glpi_tickets_users' => 'users_id', 'glpi_users' => 'id']
+                    ]
+                ],
+                'WHERE' => [
+                    'glpi_tickets_users.tickets_id' => $ticket_ids,
+                    'glpi_tickets_users.type' => 1 // Requester
+                ]
+            ]);
+
+            $requesters_by_ticket = [];
+            foreach ($requester_iter as $req_row) {
+                $tid = $req_row['tickets_id'];
+                $fullname = trim($req_row['firstname'] . ' ' . $req_row['realname']);
+                if (empty($fullname)) {
+                    $fullname = $req_row['uname'];
+                }
+                if (isset($requesters_by_ticket[$tid])) {
+                    $requesters_by_ticket[$tid][] = $fullname;
+                } else {
+                    $requesters_by_ticket[$tid] = [$fullname];
+                }
+            }
+
+            foreach ($tasks as &$task) {
+                $tid = $task['tickets_id'];
+                if (isset($requesters_by_ticket[$tid])) {
+                    $task['requester_name'] = implode(', ', $requesters_by_ticket[$tid]);
+                }
+            }
+        }
+
+        return array_values($tasks);
     }
 
     /**
@@ -993,19 +1031,19 @@ class PluginGlobalsearchSearchEngine
                     'ON' => ['glpi_projecttasks' => 'users_id', 'glpi_users' => 'id']
                 ]
             ],
-            'WHERE' => array_merge(
-                $where,
-                [
-                    'glpi_projecttasks.is_template' => 0
-                ],
-                $entity_criteria,
-                $has_private_field ? [
-                    'OR' => [
-                        'glpi_projecttasks.is_private' => 0,
-                        'glpi_projecttasks.users_id' => Session::getLoginUserID()
-                    ]
-                ] : []
-            ),
+            'WHERE' => [
+                'AND' => array_filter([
+                    $where,
+                    ['glpi_projecttasks.is_template' => 0],
+                    $entity_criteria,
+                    $has_private_field ? [
+                        'OR' => [
+                            'glpi_projecttasks.is_private' => 0,
+                            'glpi_projecttasks.users_id' => Session::getLoginUserID()
+                        ]
+                    ] : []
+                ])
+            ],
             'ORDER' => 'glpi_projecttasks.date_mod DESC'
         ];
 
