@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', function () {
+    // Locale strings from front/lang.php
+    const L = window.GLOBALSEARCH_LANG || {};
+
     // Evitar duplicados si el script se inyecta múltiples veces
     if (document.querySelector('.globalsearch-btn')) {
         return;
@@ -27,9 +30,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'btn btn-ghost-secondary globalsearch-btn me-2';
-    btn.title = 'Búsqueda global avanzada';
+    btn.title = L.btn_title || 'Advanced global search';
     // Icono de búsqueda con zoom (para diferenciarlo del nativo) + texto visible
-    btn.innerHTML = '<i class="ti ti-search me-1" aria-hidden="true"></i><span>Búsqueda global</span>';
+    btn.innerHTML = `<i class="ti ti-search me-1" aria-hidden="true"></i><span>${L.btn_label || 'Global search'}</span>`;
 
     // Insertar botón justo ANTES del contenedor de búsqueda (a su izquierda)
     searchContainer.parentNode.insertBefore(btn, searchContainer);
@@ -43,8 +46,8 @@ document.addEventListener('DOMContentLoaded', function () {
         <div class="globalsearch-backdrop"></div>
         <div class="globalsearch-dialog card shadow-lg">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h3 class="card-title mb-0">Búsqueda global</h3>
-                <button type="button" class="btn btn-link p-0 m-0 globalsearch-close text-secondary" title="Cerrar">
+                <h3 class="card-title mb-0">${L.modal_title || 'Global search'}</h3>
+                <button type="button" class="btn btn-link p-0 m-0 globalsearch-close text-secondary" title="${L.close || 'Close'}">
                     <i class="ti ti-x" aria-hidden="true"></i>
                 </button>
             </div>
@@ -58,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             <input type="text"
                                    name="globalsearch"
                                    class="form-control form-control-lg"
-                                   placeholder="Buscar tickets, proyectos (mín. 3 caracteres)..."
+                                   placeholder="${L.placeholder || 'Search tickets, projects (min. 3 characters)...'}"
                                    autocomplete="off"
                                    autofocus />
                         </div>
@@ -66,19 +69,19 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="mb-3">
                         <div class="text-muted">
                             <i class="ti ti-info-circle me-1"></i>
-                            Busca por <strong>ID</strong> (ej: <code>#123</code>), <strong>frases exactas</strong> (ej: <code>"servidor web"</code>) o <strong>palabras</strong> sueltas.
+                            ${L.help_text || 'Search by ID (e.g. #123), exact phrases (e.g. "web server") or individual words.'}
                         </div>
                     </div>
                     <div class="d-flex justify-content-end align-items-center gap-2">
                         <div class="me-auto d-none align-items-center gap-2 text-muted small globalsearch-modal-loader">
                             <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
-                            <span>Buscando…</span>
+                            <span>${L.searching || 'Searching…'}</span>
                         </div>
                         <button type="button" class="btn btn-outline-secondary globalsearch-close">
-                            Cancelar
+                            ${L.cancel || 'Cancel'}
                         </button>
                         <button type="submit" class="btn btn-primary globalsearch-submit">
-                            Buscar
+                            ${L.search || 'Search'}
                         </button>
                     </div>
                 </form>
