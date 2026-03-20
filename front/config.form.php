@@ -7,12 +7,12 @@ Session::checkRight('config', UPDATE);
 $config = new PluginGlobalsearchConfig();
 
 if (isset($_POST['update_config'])) {
-    // Preparar datos: si el checkbox no está marcado, no viene en $_POST
+    // Prepare data: if the checkbox is not checked, it won't be in $_POST
     $data = [];
     $all_types = array_keys(PluginGlobalsearchConfig::getSearchTypeNames());
 
     foreach ($all_types as $type) {
-        // Si existe en $_POST['config'], está marcado (1), sino está desmarcado (0)
+        // If it exists in $_POST['config'], it's checked (1), otherwise unchecked (0)
         $data[$type] = isset($_POST['config'][$type]) ? 1 : 0;
     }
 

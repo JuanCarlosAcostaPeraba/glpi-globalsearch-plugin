@@ -11,32 +11,32 @@ define('GLOBALSEARCH_MIN_GLPI', '11.0.0');
 define('GLOBALSEARCH_MAX_GLPI', '11.0.99');
 
 /**
- * Inicialización del plugin (GLPI la ejecuta al cargar el plugin)
+ * Plugin initialization (GLPI executes this when loading the plugin)
  */
 function plugin_init_globalsearch()
 {
     global $PLUGIN_HOOKS, $CFG_GLPI;
 
-    // Marcar el plugin como compatible con CSRF
+    // Mark the plugin as CSRF-compliant
     $PLUGIN_HOOKS['csrf_compliant']['globalsearch'] = true;
 
-    // Inyectar nuestro JS en la interfaz central
+    // Inject our JS into the central interface
     $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT]['globalsearch'][] = 'js/globalsearch_header.js';
 
-    // Opcional: CSS propio para el modal
+    // Optional: custom CSS for the modal
     $PLUGIN_HOOKS[Hooks::ADD_CSS]['globalsearch'][] = 'css/globalsearch.css';
 
-    // Añadir enlace de configuración en el menú de Configuración > Plugins
+    // Add configuration link in the Configuration > Plugins menu
     if (Session::haveRight('config', UPDATE)) {
         $PLUGIN_HOOKS['config_page']['globalsearch'] = 'front/config.form.php';
     }
 
-    // Registrar la clase de configuración
+    // Register the configuration class
     Plugin::registerClass('PluginGlobalsearchConfig', ['addtabon' => 'Config']);
 }
 
 /**
- * Información del plugin (pantalla de plugins)
+ * Plugin information (plugin screen)
  */
 function plugin_version_globalsearch()
 {
@@ -56,11 +56,11 @@ function plugin_version_globalsearch()
 }
 
 /**
- * Requisitos mínimos
+ * Minimum requirements check
  */
 function plugin_globalsearch_check_prerequisites()
 {
-    // Comprobar versión de GLPI para asegurar compatibilidad con la rama 11.x
+    // Check GLPI version to ensure compatibility with the 11.x branch
     if (version_compare(GLPI_VERSION, GLOBALSEARCH_MIN_GLPI, 'lt')) {
         echo sprintf(
             'This plugin requires GLPI >= %s. Current version: %s. For GLPI 10.x, please use plugin version 1.5.1',
@@ -83,7 +83,7 @@ function plugin_globalsearch_check_prerequisites()
 }
 
 /**
- * Estado de configuración (simple por ahora)
+ * Configuration status check (simple for now)
  */
 function plugin_globalsearch_check_config($verbose = false)
 {

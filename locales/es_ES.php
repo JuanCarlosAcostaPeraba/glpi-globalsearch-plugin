@@ -30,6 +30,7 @@ $LANG['plugin_globalsearch'] = [
     'documents' => 'Documentos',
     'software' => 'Software',
     'users' => 'Usuarios',
+    'changes' => 'Cambios',
     'ticket_tasks' => 'Tareas de Tickets',
     'project_tasks' => 'Tareas de Proyectos',
     

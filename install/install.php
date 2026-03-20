@@ -5,7 +5,7 @@ if (!defined('GLPI_ROOT')) {
 }
 
 /**
- * Instalación del plugin globalsearch
+ * Plugin installation
  */
 function plugin_globalsearch_install()
 {
@@ -13,12 +13,12 @@ function plugin_globalsearch_install()
 
     $migration = new Migration(GLOBALSEARCH_VERSION);
 
-    // Crear tabla de configuración
+    // Create configuration table
     if (!$DB->tableExists('glpi_plugin_globalsearch_configs')) {
         $query = "CREATE TABLE `glpi_plugin_globalsearch_configs` (
             `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-            `search_type` VARCHAR(50) NOT NULL COMMENT 'Tipo de búsqueda: Ticket, Project, Document, etc.',
-            `is_enabled` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = activo, 0 = desactivado',
+            `search_type` VARCHAR(50) NOT NULL COMMENT 'Search type: Ticket, Project, Document, etc.',
+            `is_enabled` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = active, 0 = disabled',
             `date_mod` TIMESTAMP NULL DEFAULT NULL,
             PRIMARY KEY (`id`),
             UNIQUE KEY `search_type` (`search_type`)
@@ -26,7 +26,7 @@ function plugin_globalsearch_install()
 
         $DB->doQuery($query);
 
-        // Insertar valores por defecto (todos activos)
+        // Insert default values (all active)
         $default_types = [
             'Ticket',
             'Project',
@@ -46,17 +46,44 @@ function plugin_globalsearch_install()
         }
     }
 
+    // Migration: add missing search types
+    $expected_types = [
+        'Ticket',
+        'Change',
+        'Project',
+        'Document',
+        'Software',
+        'User',
+        'TicketTask',
+        'ProjectTask'
+    ];
+
+    foreach ($expected_types as $type) {
+        $iterator = $DB->request([
+            'FROM'  => 'glpi_plugin_globalsearch_configs',
+            'WHERE' => ['search_type' => $type],
+            'LIMIT' => 1
+        ]);
+        if (count($iterator) === 0) {
+            $DB->insert('glpi_plugin_globalsearch_configs', [
+                'search_type' => $type,
+                'is_enabled'  => 1,
+                'date_mod'    => date('Y-m-d H:i:s')
+            ]);
+        }
+    }
+
     return true;
 }
 
 /**
- * Desinstalación del plugin
+ * Plugin uninstallation
  */
 function plugin_globalsearch_uninstall()
 {
     global $DB;
 
-    // Eliminar tabla de configuración
+    // Remove configuration table
     $tables = [
         'glpi_plugin_globalsearch_configs'
     ];

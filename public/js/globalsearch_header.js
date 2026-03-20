@@ -1,50 +1,48 @@
 document.addEventListener('DOMContentLoaded', function () {
-    // Evitar duplicados si el script se inyecta múltiples veces
+    // Prevent duplicates if the script is injected multiple times
     if (document.querySelector('.globalsearch-btn')) {
         return;
     }
 
-    // Buscar el formulario de búsqueda global nativo de GLPI
-    // Está en: .ms-md-auto o .ms-lg-auto que contiene un form con input[name="globalsearch"]
+    // Find the native GLPI global search form
+    // Located in: .ms-md-auto or .ms-lg-auto containing a form with input[name="globalsearch"]
     const nativeSearchForm = document.querySelector('form[data-submit-once] input[name="globalsearch"]');
 
     if (!nativeSearchForm) {
-        // Si no existe la barra de búsqueda nativa, no hacemos nada
-        //console.warn('[globalsearch] No se ha encontrado la barra de búsqueda nativa de GLPI.');
+        // If the native search bar doesn't exist, do nothing
         return;
     }
 
-    // El contenedor padre del formulario (donde insertaremos el botón)
+    // The parent container of the form (where we'll insert the button)
     const searchContainer = nativeSearchForm.closest('div[class*="ms-"]');
 
     if (!searchContainer) {
-        // Si no existe el contenedor esperado, no insertamos el botón
-        //console.warn('[globalsearch] No se ha encontrado el contenedor de la barra de búsqueda.');
+        // If the expected container doesn't exist, don't insert the button
         return;
     }
 
-    // Crear botón "Buscar" con estilo similar al de GLPI
+    // Create "Search" button with GLPI-like styling
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'btn btn-ghost-secondary globalsearch-btn me-2';
-    btn.title = 'Búsqueda global avanzada';
-    // Icono de búsqueda con zoom (para diferenciarlo del nativo) + texto visible
-    btn.innerHTML = '<i class="ti ti-search me-1" aria-hidden="true"></i><span>Búsqueda global</span>';
+    btn.title = 'Advanced global search';
+    // Search icon with zoom (to differentiate from native) + visible text
+    btn.innerHTML = '<i class="ti ti-search me-1" aria-hidden="true"></i><span>Global Search</span>';
 
-    // Insertar botón justo ANTES del contenedor de búsqueda (a su izquierda)
+    // Insert button just BEFORE the search container (to its left)
     searchContainer.parentNode.insertBefore(btn, searchContainer);
 
-    // Crear modal
+    // Create modal
     const modal = document.createElement('div');
     modal.className = 'globalsearch-modal d-none';
 
-    // Estructura del modal
+    // Modal structure
     modal.innerHTML = `
         <div class="globalsearch-backdrop"></div>
         <div class="globalsearch-dialog card shadow-lg">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h3 class="card-title mb-0">Búsqueda global</h3>
-                <button type="button" class="btn btn-link p-0 m-0 globalsearch-close text-secondary" title="Cerrar">
+                <h3 class="card-title mb-0">Global Search</h3>
+                <button type="button" class="btn btn-link p-0 m-0 globalsearch-close text-secondary" title="Close">
                     <i class="ti ti-x" aria-hidden="true"></i>
                 </button>
             </div>
@@ -58,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             <input type="text"
                                    name="globalsearch"
                                    class="form-control form-control-lg"
-                                   placeholder="Buscar tickets, proyectos (mín. 3 caracteres)..."
+                                   placeholder="Search tickets, changes, projects (min. 3 characters)..."
                                    autocomplete="off"
                                    autofocus />
                         </div>
@@ -66,19 +64,19 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="mb-3">
                         <div class="text-muted">
                             <i class="ti ti-info-circle me-1"></i>
-                            Busca por <strong>ID</strong> (ej: <code>#123</code>), <strong>frases exactas</strong> (ej: <code>"servidor web"</code>) o <strong>palabras</strong> sueltas.
+                            Search by <strong>ID</strong> (e.g.: <code>#123</code>), <strong>exact phrases</strong> (e.g.: <code>"web server"</code>) or <strong>individual words</strong>.
                         </div>
                     </div>
                     <div class="d-flex justify-content-end align-items-center gap-2">
                         <div class="me-auto d-none align-items-center gap-2 text-muted small globalsearch-modal-loader">
                             <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
-                            <span>Buscando…</span>
+                            <span>Searching…</span>
                         </div>
                         <button type="button" class="btn btn-outline-secondary globalsearch-close">
-                            Cancelar
+                            Cancel
                         </button>
                         <button type="submit" class="btn btn-primary globalsearch-submit">
-                            Buscar
+                            Search
                         </button>
                     </div>
                 </form>
@@ -87,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function () {
     `;
     document.body.appendChild(modal);
 
-    // Construir action del formulario usando CFG_GLPI.root_doc (disponible globalmente en GLPI)
+    // Build form action using CFG_GLPI.root_doc (available globally in GLPI)
     const form = modal.querySelector('form.globalsearch-form');
     const rootDoc = (typeof CFG_GLPI !== 'undefined' && CFG_GLPI.root_doc) ? CFG_GLPI.root_doc : '';
     const actionUrl = rootDoc + '/plugins/globalsearch/front/search.php';
@@ -96,10 +94,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const modalLoader = modal.querySelector('.globalsearch-modal-loader');
     const submitButton = modal.querySelector('.globalsearch-submit');
 
-    // Helpers abrir/cerrar
+    // Open/close helpers
     function openModal() {
         modal.classList.remove('d-none');
-        // Pequeño delay para asegurar que el modal es visible antes del focus
+        // Small delay to ensure the modal is visible before focusing
         setTimeout(() => {
             const input = modal.querySelector('input[name="globalsearch"]');
             if (input) {
@@ -112,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function closeModal() {
         modal.classList.add('d-none');
 
-        // Ocultar loader y reactivar controles si el modal se cierra sin navegar
+        // Hide loader and re-enable controls if the modal is closed without navigating
         if (modalLoader) {
             modalLoader.classList.add('d-none');
         }
@@ -125,7 +123,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Eventos
+    // Events
     btn.addEventListener('click', openModal);
 
     modal.addEventListener('click', function (e) {
@@ -144,13 +142,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Mostrar loader al enviar el formulario (sin tocar el valor del input)
+    // Show loader when submitting the form (without touching the input value)
     if (form) {
         form.addEventListener('submit', function () {
-            // Asegurar que solo exista un input con name="globalsearch"
+            // Ensure only one input with name="globalsearch" exists
             const gsInputs = form.querySelectorAll('input[name="globalsearch"]');
             if (gsInputs.length > 1) {
-                // Conservar el primero y eliminar el resto
+                // Keep the first one and remove the rest
                 gsInputs.forEach(function (inp, idx) {
                     if (idx > 0) {
                         inp.remove();
@@ -164,5 +162,3 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 });
-
-

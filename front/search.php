@@ -15,7 +15,7 @@ include('../../../inc/includes.php');
 Session::checkCentralAccess();
 Html::header(__('Search'), $_SERVER['PHP_SELF']);
 
-// Respetar la opción de permitir búsqueda global
+// Respect the allow global search option
 if (!$CFG_GLPI['allow_search_global']) {
     Html::displayRightError();
     Html::footer();
@@ -25,24 +25,24 @@ if (!$CFG_GLPI['allow_search_global']) {
 $query   = isset($_GET['globalsearch']) ? trim($_GET['globalsearch']) : '';
 $results = [];
 
-// Cargar el motor de búsqueda del plugin
+// Load the plugin search engine
 require_once GLPI_ROOT . '/plugins/globalsearch/inc/searchengine.class.php';
 
 if ($query !== '') {
     $engine  = new PluginGlobalsearchSearchEngine($query);
-    $results = $engine->searchAll();  // Ejecuta Tickets, Project, etc.
+    $results = $engine->searchAll();  // Executes Tickets, Changes, Projects, etc.
 }
 
-// Debug: verificar qué estamos obteniendo
+// Debug: verify what we're getting
 error_log("Query: " . $query);
 error_log("Results Tickets: " . count($results['Ticket'] ?? []));
 error_log("Results Projects: " . count($results['Project'] ?? []));
 
-// Obtener ruta web del plugin para el script JS
+// Get plugin web path for the JS script
 $plugin_webroot = Plugin::getWebDir('globalsearch');
 
-// Renderizar plantilla Twig usando el namespace del plugin
-// @globalsearch/ apunta a /plugins/globalsearch/templates/
+// Render Twig template using the plugin namespace
+// @globalsearch/ points to /plugins/globalsearch/templates/
 try {
     TemplateRenderer::getInstance()->display(
         '@globalsearch/search_results.html.twig',
@@ -53,7 +53,7 @@ try {
         ]
     );
 } catch (Exception $e) {
-    echo "<pre>Error en template: " . $e->getMessage() . "</pre>";
+    echo "<pre>Template error: " . $e->getMessage() . "</pre>";
     error_log("Template error: " . $e->getMessage());
 }
 

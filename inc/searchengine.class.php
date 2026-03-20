@@ -18,7 +18,7 @@ class PluginGlobalsearchSearchEngine
     {
         $raw = trim($raw_query);
 
-        // Soporte para prefijo "#123" => modo solo ID
+        // Support for "#123" prefix => ID-only mode
         if ($raw !== '' && mb_substr($raw, 0, 1) === '#') {
             $id = trim(mb_substr($raw, 1));
             if (is_numeric($id)) {
@@ -26,27 +26,27 @@ class PluginGlobalsearchSearchEngine
                 $this->raw_query = $id;
                 return;
             }
-            // Si después de # no hay número, seguimos usando la query completa
+            // If there is no number after #, use the full query
         }
 
         $this->raw_query = $raw;
     }
 
     /**
-     * Obtiene las restricciones de entidades usando métodos estándar de GLPI.
-     * Considera entidades recursivas (is_recursive = 1).
-     * Si un item está en una entidad padre con is_recursive=1, será visible desde entidades hijas.
+     * Gets the entity restriction criteria using standard GLPI methods.
+     * Considers recursive entities (is_recursive = 1).
+     * If an item is in a parent entity with is_recursive=1, it will be visible from child entities.
      *
-     * @param string $itemtype Tipo de item (Ticket, Project, etc.)
-     * @param string $table_alias Alias de la tabla en la consulta (ej: 'glpi_tickets')
-     * @return array Criterio WHERE para restricciones de entidades
+     * @param string $itemtype Item type (Ticket, Project, etc.)
+     * @param string $table_alias Table alias in the query (e.g.: 'glpi_tickets')
+     * @return array WHERE criteria for entity restrictions
      */
     private function getEntityRestrictCriteria($itemtype, $table_alias = null)
     {
         $table = $itemtype::getTable();
         $field = 'entities_id';
 
-        // Obtener todas las entidades activas del usuario
+        // Get all active entities for the user
         $active_entities = [];
         if (isset($_SESSION['glpiactiveentities']) && is_array($_SESSION['glpiactiveentities'])) {
             $active_entities = $_SESSION['glpiactiveentities'];
@@ -56,37 +56,37 @@ class PluginGlobalsearchSearchEngine
             return [];
         }
 
-        // Obtener información de recursividad del usuario
+        // Get recursion information for the user
         $recursive_entities = [];
         if (isset($_SESSION['glpiactiveentities_recursive']) && is_array($_SESSION['glpiactiveentities_recursive'])) {
             $recursive_entities = $_SESSION['glpiactiveentities_recursive'];
         }
 
-        // Construir lista completa de entidades accesibles
-        // En GLPI, si un item está en una entidad padre con is_recursive=1,
-        // ese item es visible desde cualquier entidad hija.
-        // Por lo tanto, necesitamos incluir:
-        // 1. Todas las entidades activas del usuario
-        // 2. Todas las entidades hijas de las entidades activas con is_recursive=1
-        // 3. Todas las entidades padre de las entidades activas (para ver items de padres con is_recursive)
+        // Build complete list of accessible entities
+        // In GLPI, if an item is in a parent entity with is_recursive=1,
+        // that item is visible from any child entity.
+        // Therefore, we need to include:
+        // 1. All active entities of the user
+        // 2. All child entities of the active entities with is_recursive=1
+        // 3. All parent entities of the active entities (to see items from parents with is_recursive)
         $all_entities = [];
 
         foreach ($active_entities as $entity_id) {
-            // Agregar la entidad activa
+            // Add the active entity
             $all_entities[$entity_id] = $entity_id;
 
-            // Si la entidad tiene is_recursive=1, obtener todas sus entidades hijas
+            // If the entity has is_recursive=1, get all its child entities
             if (isset($recursive_entities[$entity_id]) && $recursive_entities[$entity_id] == 1) {
-                // Obtener todas las entidades hijas recursivamente
+                // Get all child entities recursively
                 $sons = Entity::getSonsOf($entity_id);
                 foreach ($sons as $son_id) {
                     $all_entities[$son_id] = $son_id;
                 }
             }
 
-            // Incluir todos los ancestros de esta entidad activa
-            // Esto permite ver items que están en entidades padre con is_recursive=1
-            // Necesitamos crear una instancia de Entity para usar getAncestors()
+            // Include all ancestors of this active entity
+            // This allows seeing items in parent entities with is_recursive=1
+            // We need to create an Entity instance to use getAncestors()
             $entity = new Entity();
             if ($entity->getFromDB($entity_id)) {
                 $ancestors = $entity->getAncestors();
@@ -111,17 +111,17 @@ class PluginGlobalsearchSearchEngine
 
 
     /**
-     * Obtiene el nombre del técnico asignado a un ticket
-     * Los técnicos se guardan en glpi_tickets_users con type = 2 (assigned)
+     * Gets the name of the technician assigned to a ticket.
+     * Technicians are stored in glpi_tickets_users with type = 2 (assigned).
      *
-     * @param int $ticket_id ID del ticket
-     * @return string Nombre del técnico o "Sin asignar"
+     * @param int $ticket_id Ticket ID
+     * @return string Technician name or "Not assigned"
      */
     private function getTechnicianName($ticket_id)
     {
         global $DB;
 
-        // Buscar técnico asignado (type = 2 significa "assigned")
+        // Find assigned technician (type = 2 means "assigned")
         $criteria = [
             'SELECT' => [
                 'glpi_users.firstname',
@@ -157,29 +157,29 @@ class PluginGlobalsearchSearchEngine
     }
 
     /**
-     * Genera el criterio de búsqueda "estilo Google".
-     * Divide la query en palabras y requiere que TODAS las palabras aparezcan
-     * en al menos uno de los campos proporcionados.
+     * Generates "Google-style" search criteria.
+     * Splits the query into words and requires ALL words to appear
+     * in at least one of the provided fields.
      *
-     * @param array $fields Array de nombres de campos (ej: ['name', 'content'])
-     * @return array Array compatible con DBmysqlIterator WHERE
+     * @param array $fields Array of field names (e.g.: ['name', 'content'])
+     * @return array Array compatible with DBmysqlIterator WHERE
      */
     private function getMultiWordCriteria(array $fields)
     {
-        // Regex para encontrar "frases literales" o palabras sueltas.
-        // Captura el contenido entre comillas en el primer grupo o palabras sin comillas en el segundo.
+        // Regex to find "literal phrases" or standalone words.
+        // Captures content between quotes in the first group or unquoted words in the second.
         preg_match_all('/"([^"]+)"|(\S+)/', $this->raw_query, $matches);
 
         $terms = [];
         foreach ($matches[1] as $key => $phrase) {
             if ($phrase !== '') {
-                // Es una frase entre comillas
+                // It's a quoted phrase
                 $terms[] = $phrase;
             } else {
-                // Es una palabra suelta (o una comilla mal cerrada)
+                // It's a standalone word (or a malformed quote)
                 $term = $matches[2][$key];
                 if ($term !== '') {
-                    // Si el término es solo una comilla ("), lo ignoramos para evitar LIKE '%%%'
+                    // If the term is just a quote ("), skip it to avoid LIKE '%%%'
                     if ($term !== '"') {
                         $terms[] = $term;
                     }
@@ -194,60 +194,60 @@ class PluginGlobalsearchSearchEngine
         $and_criteria = [];
 
         foreach ($terms as $term) {
-            // Cada término (palabra o frase) debe encontrarse en ALGUNO de los campos (OR)
+            // Each term (word or phrase) must be found in ANY of the fields (OR)
             $or_criteria = [];
             foreach ($fields as $field) {
                 $or_criteria[$field] = ['LIKE', '%' . $term . '%'];
             }
-            // Agregamos este bloque OR al bloque principal AND
+            // Add this OR block to the main AND block
             $and_criteria[] = ['OR' => $or_criteria];
         }
 
-        // Si solo hay un término, devolvemos el OR directamente para aplanar el SQL.
-        // Si hay varios, los envolvemos en un AND.
+        // If there's only one term, return the OR directly to flatten the SQL.
+        // If there are multiple, wrap them in an AND.
         return (count($and_criteria) === 1) ? $and_criteria[0] : ['AND' => $and_criteria];
     }
 
     /**
-     * Obtiene los criterios de restricción de permisos para tickets.
-     * Considera si el usuario puede ver tickets no asignados, solo asignados, etc.
+     * Gets the permission restriction criteria for tickets.
+     * Considers whether the user can see unassigned tickets, only assigned ones, etc.
      *
-     * @return array Criterio WHERE para restricciones de permisos
+     * @return array WHERE criteria for permission restrictions
      */
     private function getTicketPermissionCriteria()
     {
         $user_id = Session::getLoginUserID();
         $criteria = [];
 
-        // Verificar si el usuario puede ver todos los tickets o solo los asignados
-        // En GLPI, esto se controla a través de los perfiles y derechos
-        // Si el usuario no tiene permiso para ver tickets no asignados, 
-        // debemos filtrar solo los tickets asignados a él o a sus grupos
+        // Check if the user can see all tickets or only assigned ones
+        // In GLPI, this is controlled through profiles and rights
+        // If the user doesn't have permission to see unassigned tickets,
+        // we should filter only tickets assigned to them or their groups
 
-        // Verificar si el usuario tiene el derecho de ver todos los tickets
-        // Esto se hace verificando el perfil del usuario
+        // Check if the user has the right to see all tickets
+        // This is done by checking the user's profile
         $can_see_all = false;
         if (isset($_SESSION['glpiactiveprofile']['ticket'])) {
-            // Si tiene derecho de ver todos los tickets (típicamente ticket = ALL)
-            // En GLPI, los derechos se almacenan en $_SESSION['glpiactiveprofile']
-            // Para simplificar, usamos el método can() después, pero intentamos
-            // aplicar algunas restricciones básicas en SQL cuando sea posible
+            // If they have the right to see all tickets (typically ticket = ALL)
+            // In GLPI, rights are stored in $_SESSION['glpiactiveprofile']
+            // To simplify, we use the can() method later, but we try to
+            // apply some basic restrictions in SQL when possible
         }
 
-        // Si no puede ver todos los tickets, aplicar restricción de tickets asignados
-        // Nota: Esta es una aproximación. La verificación completa se hace con can()
-        // pero podemos optimizar filtrando en SQL cuando sea posible
+        // If they can't see all tickets, apply assigned ticket restriction
+        // Note: This is an approximation. The full verification is done with can()
+        // but we can optimize by filtering in SQL when possible
         if (!$can_see_all) {
-            // No aplicamos restricción aquí porque es complejo determinar
-            // todos los casos (grupos, observadores, etc.)
-            // Se deja que can() lo maneje después
+            // We don't apply a restriction here because it's complex to determine
+            // all cases (groups, observers, etc.)
+            // We let can() handle it later
         }
 
         return $criteria;
     }
 
     /**
-     * Ejecuta todas las búsquedas soportadas.
+     * Executes all supported searches.
      *
      * @return array
      */
@@ -255,7 +255,7 @@ class PluginGlobalsearchSearchEngine
     {
         $results = [];
 
-        // Verificar configuración para cada tipo de búsqueda
+        // Check configuration for each search type
         if (PluginGlobalsearchConfig::isEnabled('Ticket')) {
             $results['Ticket'] = $this->searchTickets();
         }
@@ -276,6 +276,10 @@ class PluginGlobalsearchSearchEngine
             $results['User'] = $this->searchUsers();
         }
 
+        if (PluginGlobalsearchConfig::isEnabled('Change')) {
+            $results['Change'] = $this->searchChanges();
+        }
+
         if (PluginGlobalsearchConfig::isEnabled('TicketTask')) {
             $results['TicketTask'] = $this->searchTicketTasks();
         }
@@ -288,9 +292,9 @@ class PluginGlobalsearchSearchEngine
     }
 
     /**
-     * Búsqueda en tickets (incluyendo cerrados/resueltos)
-     * Devuelve todos los resultados sin límite, usando estrategia Bulk Load para técnicos
-     * Aplica restricciones de permisos según los derechos del usuario.
+     * Search in tickets (including closed/resolved).
+     * Returns all results without limit, using Bulk Load strategy for technicians.
+     * Applies permission restrictions based on the user's rights.
      *
      * @return array
      */
@@ -302,10 +306,10 @@ class PluginGlobalsearchSearchEngine
             return [];
         }
 
-        // Obtener restricciones de entidades usando métodos estándar de GLPI
+        // Get entity restrictions using standard GLPI methods
         $entity_criteria = $this->getEntityRestrictCriteria('Ticket', 'glpi_tickets');
 
-        // Construir criterios WHERE comunes
+        // Build common WHERE criteria
         $where = [];
         $search_fields = ['glpi_tickets.name', 'glpi_tickets.content'];
 
@@ -342,7 +346,7 @@ class PluginGlobalsearchSearchEngine
             }
         }
 
-        // Aplicar restricciones de permisos para tickets
+        // Apply permission restrictions for tickets
         $permission_criteria = $this->getTicketPermissionCriteria();
 
         $common_where = [
@@ -354,7 +358,7 @@ class PluginGlobalsearchSearchEngine
             ])
         ];
 
-        // 1. OBTENER TODOS LOS TICKETS (SIN LIMIT, SIN JOIN de técnicos para evitar duplicados)
+        // 1. GET ALL TICKETS (NO LIMIT, NO JOIN of technicians to avoid duplicates)
         $iterator = $DB->request([
             'SELECT' => [
                 'glpi_tickets.id',
@@ -375,17 +379,17 @@ class PluginGlobalsearchSearchEngine
         $ticket_obj = new Ticket();
 
         foreach ($iterator as $row) {
-            // Verificar permisos antes de agregar
+            // Verify permissions before adding
             if ($ticket_obj->can($row['id'], READ)) {
                 $row['status_name'] = Ticket::getStatus($row['status']);
-                $row['tech_name'] = __('Not assigned'); // Valor inicial
-                $row['requester_name'] = __('Not assigned'); // Valor inicial
+                $row['tech_name'] = __('Not assigned'); // Initial value
+                $row['requester_name'] = __('Not assigned'); // Initial value
                 $tickets[$row['id']] = $row;
                 $ticket_ids[] = $row['id'];
             }
         }
 
-        // 2. CARGA MASIVA DE TÉCNICOS (BULK LOAD)
+        // 2. BULK LOAD TECHNICIANS
         if (!empty($ticket_ids)) {
             $tech_iter = $DB->request([
                 'SELECT' => [
@@ -421,7 +425,7 @@ class PluginGlobalsearchSearchEngine
                 }
             }
 
-            // Asignar nombres concatenados
+            // Assign concatenated names
             foreach ($techs_by_ticket as $tid => $names) {
                 if (isset($tickets[$tid])) {
                     $tickets[$tid]['tech_name'] = implode(', ', $names);
@@ -429,7 +433,7 @@ class PluginGlobalsearchSearchEngine
             }
         }
 
-        // 3. CARGA MASIVA DE SOLICITANTES (BULK LOAD)
+        // 3. BULK LOAD REQUESTERS
         if (!empty($ticket_ids)) {
             $requester_iter = $DB->request([
                 'SELECT' => [
@@ -464,7 +468,7 @@ class PluginGlobalsearchSearchEngine
                 }
             }
 
-            // Asignar nombres concatenados
+            // Assign concatenated names
             foreach ($requesters_by_ticket as $tid => $names) {
                 if (isset($tickets[$tid])) {
                     $tickets[$tid]['requester_name'] = implode(', ', $names);
@@ -476,7 +480,7 @@ class PluginGlobalsearchSearchEngine
     }
 
     /**
-     * Búsqueda en proyectos
+     * Search in projects
      */
     public function searchProjects()
     {
@@ -486,7 +490,7 @@ class PluginGlobalsearchSearchEngine
             return [];
         }
 
-        // Obtener restricciones de entidades usando métodos estándar de GLPI
+        // Get entity restrictions using standard GLPI methods
         $entity_criteria = $this->getEntityRestrictCriteria('Project', 'glpi_projects');
 
         $search_fields = ['glpi_projects.name', 'glpi_projects.comment', 'glpi_projects.content'];
@@ -556,10 +560,10 @@ class PluginGlobalsearchSearchEngine
         $iterator = $DB->request($criteria);
         $results = [];
         foreach ($iterator as $row) {
-            // Verificar permisos adicionales
+            // Verify additional permissions
             $project = new Project();
             if ($project->can($row['id'], READ)) {
-                // Construir nombre del solicitante
+                // Build requester name
                 $fullname = trim(($row['requester_firstname'] ?? '') . ' ' . ($row['requester_realname'] ?? ''));
                 $row['requester_name'] = $fullname ?: ($row['requester_uname'] ?? __('Unknown'));
                 $results[] = $row;
@@ -569,7 +573,7 @@ class PluginGlobalsearchSearchEngine
     }
 
     /**
-     * Búsqueda en documentos
+     * Search in documents
      */
     public function searchDocuments()
     {
@@ -579,23 +583,23 @@ class PluginGlobalsearchSearchEngine
             return [];
         }
 
-        // Obtener restricciones de entidades usando métodos estándar de GLPI
+        // Get entity restrictions using standard GLPI methods
         $entity_criteria = $this->getEntityRestrictCriteria('Document', 'glpi_documents');
 
         $search_fields = ['glpi_documents.name', 'glpi_documents.filename', 'glpi_documents.comment'];
 
         if (is_numeric($this->raw_query)) {
-            // Criterio por ID
+            // ID-based criteria
             $id_criteria = ['glpi_documents.id' => $this->raw_query];
 
             if ($this->id_only) {
-                // Modo solo ID
+                // ID-only mode
                 $where = $id_criteria;
             } else {
-                // Criterio por contenido
+                // Content-based criteria
                 $content_criteria = $this->getMultiWordCriteria($search_fields);
 
-                // Combinar ambos con OR
+                // Combine both with OR
                 if (!empty($content_criteria)) {
                     $where = [
                         'OR' => [
@@ -638,7 +642,7 @@ class PluginGlobalsearchSearchEngine
         $iterator = $DB->request($criteria);
         $results = [];
         foreach ($iterator as $row) {
-            // Verificar permisos adicionales
+            // Verify additional permissions
             $document = new Document();
             if ($document->can($row['id'], READ)) {
                 $results[] = $row;
@@ -648,7 +652,7 @@ class PluginGlobalsearchSearchEngine
     }
 
     /**
-     * Búsqueda en software
+     * Search in software
      */
     public function searchSoftware()
     {
@@ -658,23 +662,23 @@ class PluginGlobalsearchSearchEngine
             return [];
         }
 
-        // Obtener restricciones de entidades usando métodos estándar de GLPI
+        // Get entity restrictions using standard GLPI methods
         $entity_criteria = $this->getEntityRestrictCriteria('Software', 'glpi_softwares');
 
         $search_fields = ['glpi_softwares.name', 'glpi_softwares.comment'];
 
         if (is_numeric($this->raw_query)) {
-            // Criterio por ID
+            // ID-based criteria
             $id_criteria = ['glpi_softwares.id' => $this->raw_query];
 
             if ($this->id_only) {
-                // Modo solo ID
+                // ID-only mode
                 $where = $id_criteria;
             } else {
-                // Criterio por contenido
+                // Content-based criteria
                 $content_criteria = $this->getMultiWordCriteria($search_fields);
 
-                // Combinar ambos con OR
+                // Combine both with OR
                 if (!empty($content_criteria)) {
                     $where = [
                         'OR' => [
@@ -717,7 +721,7 @@ class PluginGlobalsearchSearchEngine
         $iterator = $DB->request($criteria);
         $results = [];
         foreach ($iterator as $row) {
-            // Verificar permisos adicionales
+            // Verify additional permissions
             $software = new Software();
             if ($software->can($row['id'], READ)) {
                 $results[] = $row;
@@ -727,7 +731,7 @@ class PluginGlobalsearchSearchEngine
     }
 
     /**
-     * Búsqueda en usuarios
+     * Search in users
      */
     public function searchUsers()
     {
@@ -737,23 +741,23 @@ class PluginGlobalsearchSearchEngine
             return [];
         }
 
-        // Los usuarios no tienen restricciones de entidad directas como otros items
-        // pero debemos verificar permisos de visualización
+        // Users don't have direct entity restrictions like other items,
+        // but we must verify view permissions
 
         $search_fields = ['glpi_users.name', 'glpi_users.realname', 'glpi_users.firstname', 'glpi_users.phone', 'glpi_users.mobile'];
 
         if (is_numeric($this->raw_query)) {
-            // Criterio por ID
+            // ID-based criteria
             $id_criteria = ['glpi_users.id' => $this->raw_query];
 
             if ($this->id_only) {
-                // Modo solo ID
+                // ID-only mode
                 $where = $id_criteria;
             } else {
-                // Criterio por contenido
+                // Content-based criteria
                 $content_criteria = $this->getMultiWordCriteria($search_fields);
 
-                // Combinar ambos con OR
+                // Combine both with OR
                 if (!empty($content_criteria)) {
                     $where = [
                         'OR' => [
@@ -797,7 +801,7 @@ class PluginGlobalsearchSearchEngine
         $results = [];
 
         foreach ($iterator as $row) {
-            // Verificar permisos adicionales
+            // Verify additional permissions
             $user = new User();
             if ($user->can($row['id'], READ)) {
                 $fullname = trim(($row['firstname'] ?? '') . ' ' . ($row['realname'] ?? ''));
@@ -810,7 +814,155 @@ class PluginGlobalsearchSearchEngine
     }
 
     /**
-     * Búsqueda en tareas de tickets
+     * Search in changes
+     */
+    public function searchChanges()
+    {
+        global $DB;
+
+        if (!Change::canView()) {
+            return [];
+        }
+
+        $entity_criteria = $this->getEntityRestrictCriteria('Change', 'glpi_changes');
+
+        $search_fields = ['glpi_changes.name', 'glpi_changes.content'];
+
+        if ($this->id_only) {
+            $where = ['glpi_changes.id' => $this->raw_query];
+        } else {
+            $main_criteria = [];
+            if (is_numeric($this->raw_query)) {
+                $id_criteria = ['glpi_changes.id' => $this->raw_query];
+                $content_criteria = $this->getMultiWordCriteria($search_fields);
+                $main_criteria = !empty($content_criteria) ? ['OR' => [$id_criteria, $content_criteria]] : $id_criteria;
+            } elseif (mb_strlen($this->raw_query) >= 3) {
+                $main_criteria = $this->getMultiWordCriteria($search_fields);
+            } else {
+                return [];
+            }
+
+            $where = $main_criteria;
+        }
+
+        $common_where = [
+            'AND' => array_filter([
+                $where,
+                $entity_criteria,
+                ['glpi_changes.is_deleted' => 0]
+            ])
+        ];
+
+        $iterator = $DB->request([
+            'SELECT' => [
+                'glpi_changes.id',
+                'glpi_changes.name',
+                'glpi_changes.status',
+                'glpi_changes.entities_id',
+                'glpi_changes.date',
+                'glpi_changes.closedate',
+                'glpi_changes.date_mod'
+            ],
+            'FROM' => 'glpi_changes',
+            'WHERE' => $common_where,
+            'ORDER' => 'glpi_changes.date_mod DESC'
+        ]);
+
+        $changes = [];
+        $change_ids = [];
+        $change_obj = new Change();
+
+        foreach ($iterator as $row) {
+            if ($change_obj->can($row['id'], READ)) {
+                $row['status_name'] = Change::getStatus($row['status']);
+                $row['tech_name'] = __('Not assigned');
+                $row['requester_name'] = __('Not assigned');
+                $changes[$row['id']] = $row;
+                $change_ids[] = $row['id'];
+            }
+        }
+
+        // Bulk load technicians
+        if (!empty($change_ids)) {
+            $tech_iter = $DB->request([
+                'SELECT' => [
+                    'glpi_changes_users.changes_id',
+                    'glpi_users.firstname',
+                    'glpi_users.realname',
+                    'glpi_users.name AS uname'
+                ],
+                'FROM' => 'glpi_changes_users',
+                'INNER JOIN' => [
+                    'glpi_users' => [
+                        'ON' => ['glpi_changes_users' => 'users_id', 'glpi_users' => 'id']
+                    ]
+                ],
+                'WHERE' => [
+                    'glpi_changes_users.changes_id' => $change_ids,
+                    'glpi_changes_users.type' => 2 // Assigned
+                ]
+            ]);
+
+            $techs_by_change = [];
+            foreach ($tech_iter as $tech_row) {
+                $cid = $tech_row['changes_id'];
+                $fullname = trim($tech_row['firstname'] . ' ' . $tech_row['realname']);
+                if (empty($fullname)) {
+                    $fullname = $tech_row['uname'];
+                }
+                $techs_by_change[$cid][] = $fullname;
+            }
+
+            foreach ($techs_by_change as $cid => $names) {
+                if (isset($changes[$cid])) {
+                    $changes[$cid]['tech_name'] = implode(', ', $names);
+                }
+            }
+        }
+
+        // Bulk load requesters
+        if (!empty($change_ids)) {
+            $requester_iter = $DB->request([
+                'SELECT' => [
+                    'glpi_changes_users.changes_id',
+                    'glpi_users.firstname',
+                    'glpi_users.realname',
+                    'glpi_users.name AS uname'
+                ],
+                'FROM' => 'glpi_changes_users',
+                'INNER JOIN' => [
+                    'glpi_users' => [
+                        'ON' => ['glpi_changes_users' => 'users_id', 'glpi_users' => 'id']
+                    ]
+                ],
+                'WHERE' => [
+                    'glpi_changes_users.changes_id' => $change_ids,
+                    'glpi_changes_users.type' => 1 // Requester
+                ]
+            ]);
+
+            $requesters_by_change = [];
+            foreach ($requester_iter as $req_row) {
+                $cid = $req_row['changes_id'];
+                $fullname = trim($req_row['firstname'] . ' ' . $req_row['realname']);
+                if (empty($fullname)) {
+                    $fullname = $req_row['uname'];
+                }
+                $requesters_by_change[$cid][] = $fullname;
+            }
+
+            foreach ($requesters_by_change as $cid => $names) {
+                if (isset($changes[$cid])) {
+                    $changes[$cid]['requester_name'] = implode(', ', $names);
+                }
+            }
+        }
+
+        return array_values($changes);
+    }
+
+    /**
+     * Search in ticket tasks
      */
     public function searchTicketTasks()
     {
@@ -824,16 +976,16 @@ class PluginGlobalsearchSearchEngine
             return [];
         }
 
-        // Obtener restricciones de entidades para tickets (las tareas se vinculan a tickets)
+        // Get entity restrictions for tickets (tasks are linked to tickets)
         $entity_criteria = $this->getEntityRestrictCriteria('Ticket', 'glpi_tickets');
 
-        // Campos donde buscar
+        // Fields to search in
         $search_fields = ['glpi_tickettasks.content'];
 
-        // Construir criterio de búsqueda en contenido
+        // Build content search criteria
         $content_criteria = $this->getMultiWordCriteria($search_fields);
 
-        // Si es numérico, también buscamos por ID de tarea o ID de ticket
+        // If numeric, also search by task ID or ticket ID
         if (is_numeric($this->raw_query)) {
             $id_criteria = [
                 'OR' => [
@@ -854,7 +1006,7 @@ class PluginGlobalsearchSearchEngine
             $where_criteria = $content_criteria;
         }
 
-        // Aplicar restricciones de permisos para tareas privadas
+        // Apply permission restrictions for private tasks
         $user_id = Session::getLoginUserID();
         $private_criteria = [
             'OR' => [
@@ -901,15 +1053,15 @@ class PluginGlobalsearchSearchEngine
         $task_obj = new TicketTask();
 
         foreach ($iterator as $row) {
-            // Verificar permisos con can()
+            // Verify permissions with can()
             if ($task_obj->can($row['id'], READ)) {
-                $row['requester_name'] = __('Unknown'); // Valor inicial
+                $row['requester_name'] = __('Unknown'); // Initial value
                 $tasks[$row['id']] = $row;
                 $ticket_ids[] = $row['tickets_id'];
             }
         }
 
-        // Carga masiva de solicitantes (Bulk Load)
+        // Bulk load requesters
         if (!empty($ticket_ids)) {
             $ticket_ids = array_unique($ticket_ids);
             $requester_iter = $DB->request([
@@ -957,7 +1109,7 @@ class PluginGlobalsearchSearchEngine
     }
 
     /**
-     * Búsqueda en tareas de proyectos
+     * Search in project tasks
      */
     public function searchProjectTasks()
     {
@@ -967,7 +1119,7 @@ class PluginGlobalsearchSearchEngine
             return [];
         }
 
-        // Obtener restricciones de entidades usando métodos estándar de GLPI
+        // Get entity restrictions using standard GLPI methods
         $entity_criteria = $this->getEntityRestrictCriteria('ProjectTask', 'glpi_projecttasks');
 
         $has_private_field = $DB->fieldExists('glpi_projecttasks', 'is_private');
@@ -975,17 +1127,17 @@ class PluginGlobalsearchSearchEngine
         $search_fields = ['glpi_projecttasks.name', 'glpi_projecttasks.content', 'glpi_projecttasks.comment'];
 
         if (is_numeric($this->raw_query)) {
-            // Criterio por ID
+            // ID-based criteria
             $id_criteria = ['glpi_projecttasks.id' => $this->raw_query];
 
             if ($this->id_only) {
-                // Modo solo ID
+                // ID-only mode
                 $where = $id_criteria;
             } else {
-                // Criterio por contenido
+                // Content-based criteria
                 $content_criteria = $this->getMultiWordCriteria($search_fields);
 
-                // Combinar ambos con OR
+                // Combine both with OR
                 if (!empty($content_criteria)) {
                     $where = [
                         'OR' => [
@@ -1050,10 +1202,10 @@ class PluginGlobalsearchSearchEngine
         $iterator = $DB->request($criteria);
         $results = [];
         foreach ($iterator as $row) {
-            // Verificar permisos: el método can() ya verifica tareas privadas y otros permisos
+            // Verify permissions: can() already checks private tasks and other permissions
             $projecttask = new ProjectTask();
             if ($projecttask->can($row['id'], READ)) {
-                // Construir nombre del solicitante
+                // Build requester name
                 $fullname = trim(($row['requester_firstname'] ?? '') . ' ' . ($row['requester_realname'] ?? ''));
                 $row['requester_name'] = $fullname ?: ($row['requester_uname'] ?? __('Unknown'));
                 $results[] = $row;

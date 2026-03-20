@@ -9,9 +9,9 @@ class PluginGlobalsearchConfig extends CommonDBTM
     static $rightname = 'config';
 
     /**
-     * Obtiene la configuración de todos los tipos de búsqueda
+     * Gets the configuration of all search types
      *
-     * @return array Array asociativo [search_type => is_enabled]
+     * @return array Associative array [search_type => is_enabled]
      */
     public static function getConfig()
     {
@@ -31,9 +31,9 @@ class PluginGlobalsearchConfig extends CommonDBTM
     }
 
     /**
-     * Actualiza la configuración
+     * Updates the configuration
      *
-     * @param array $data Array asociativo [search_type => is_enabled]
+     * @param array $data Associative array [search_type => is_enabled]
      * @return bool
      */
     public static function updateConfig($data)
@@ -57,7 +57,7 @@ class PluginGlobalsearchConfig extends CommonDBTM
     }
 
     /**
-     * Verifica si un tipo de búsqueda está habilitado
+     * Checks if a search type is enabled
      *
      * @param string $search_type
      * @return bool
@@ -77,12 +77,12 @@ class PluginGlobalsearchConfig extends CommonDBTM
             return (bool)$row['is_enabled'];
         }
 
-        // Por defecto, si no existe, está habilitado
+        // By default, if it doesn't exist, it's enabled
         return true;
     }
 
     /**
-     * Obtiene los nombres traducidos de los tipos de búsqueda
+     * Gets the translated names of the search types
      *
      * @return array
      */
@@ -90,6 +90,7 @@ class PluginGlobalsearchConfig extends CommonDBTM
     {
         return [
             'Ticket'      => _n('Ticket', 'Tickets', 2),
+            'Change'      => _n('Change', 'Changes', 2),
             'Project'     => _n('Project', 'Projects', 2),
             'Document'    => _n('Document', 'Documents', 2),
             'Software'    => _n('Software', 'Software', 2),
@@ -100,7 +101,7 @@ class PluginGlobalsearchConfig extends CommonDBTM
     }
 
     /**
-     * Muestra el formulario de configuración
+     * Displays the configuration form
      */
     public function showConfigForm()
     {

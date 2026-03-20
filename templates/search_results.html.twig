@@ -1,4 +1,4 @@
-{# Loader inicial - se oculta cuando el contenido se carga #}
+{# Initial loader - hidden when content is loaded #}
 <div id="globalsearch-loader" class="text-center py-5">
 	<div class="spinner-border text-primary" role="status">
 		<span class="visually-hidden">{{ __('Loading...') }}</span>
@@ -44,6 +44,45 @@
 										<td>{{ t.tech_name }}</td>
 										<td>{{ t.requester_name|default(__('Unknown')) }}</td>
 										<td>{{ t.date }}</td>
+									</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			{% endif %}
+
+			{# Changes #}
+			{% if results.Change is defined and results.Change|length > 0 %}
+				<div class="card mb-3">
+					<div class="card-header">
+						<h3 class="card-title">{{ _n('Change', 'Changes', 2) }}</h3>
+					</div>
+					<div class="table-responsive">
+						<table class="table table-hover card-table search-results-table" id="table-changes">
+							<thead>
+								<tr>
+									<th>{{ __('ID') }}</th>
+									<th>{{ __('Name') }}</th>
+									<th>{{ __('Status') }}</th>
+									<th>{{ __('Technician') }}</th>
+									<th>{{ __('Requester') }}</th>
+									<th>{{ __('Date') }}</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for c in results.Change %}
+									<tr>
+										<td>
+											<a href="{{ path('front/change.form.php') ~ '?id=' ~ c.id }}">
+												#{{ c.id }}
+											</a>
+										</td>
+										<td>{{ c.name }}</td>
+										<td>{{ c.status_name }}</td>
+										<td>{{ c.tech_name }}</td>
+										<td>{{ c.requester_name|default(__('Unknown')) }}</td>
+										<td>{{ c.date }}</td>
 									</tr>
 								{% endfor %}
 							</tbody>
@@ -293,7 +332,7 @@
 	</div>
 </div>
 
-{# Ocultar loader del backend y mostrar resultados cuando el DOM esté listo #}
+{# Hide backend loader and show results when the DOM is ready #}
 <script>
 	(function () {
 function hideBackendLoader() {
@@ -306,14 +345,14 @@ results.style.display = 'block';
 }
 }
 
-// Ocultar loader cuando el DOM esté listo
+// Hide loader when the DOM is ready
 if (document.readyState === 'loading') {
 document.addEventListener('DOMContentLoaded', hideBackendLoader);
-} else { // DOM ya está listo
+} else { // DOM is already ready
 setTimeout(hideBackendLoader, 50);
 }
 })();
 </script>
 
-{# Incluir script JavaScript de funcionalidades mejoradas #}
+{# Include enhanced functionality JavaScript #}
 <script src="{{ plugin_webroot }}/public/js/globalsearch_enhanced.js" onerror="console.error('GlobalSearch: Failed to load script')" onload="console.log('GlobalSearch: Script loaded successfully')"></script>

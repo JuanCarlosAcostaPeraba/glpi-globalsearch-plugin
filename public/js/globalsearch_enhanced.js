@@ -1,5 +1,5 @@
 /**
- * Global Search Enhanced - Paginación, Filtros, Resaltado y Gestión de Columnas
+ * Global Search Enhanced - Pagination, Filters, Highlighting and Column Management
  */
 
 (function () {
@@ -9,7 +9,7 @@
     const STORAGE_PREFIX = 'globalsearch_columns_';
 
     /**
-     * Utilidades para cookies
+     * Cookie utilities
      */
     function setCookie(name, value, days) {
         const expires = new Date();
@@ -35,7 +35,7 @@
     }
 
     /**
-     * Inicializar todas las funcionalidades para cada tabla
+     * Initialize all features for each table
      */
     function initAllTables() {
         try {
@@ -43,7 +43,7 @@
 
             tables.forEach(function (table) {
                 try {
-                    // Evitar doble inicialización
+                    // Prevent double initialization
                     if (table.classList.contains('initialized')) {
                         return;
                     }
@@ -68,7 +68,7 @@
     }
 
     /**
-     * Inicializar ordenación de columnas
+     * Initialize column sorting
      */
     function initSorting(table) {
         const thead = table.querySelector('thead');
@@ -82,10 +82,10 @@
             th.addEventListener('click', function () {
                 const currentOrder = th.classList.contains('sort-asc') ? 'desc' : 'asc';
 
-                // Limpiar clases de ordenación de todos los headers
+                // Clear sort classes from all headers
                 headers.forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
 
-                // Aplicar clase al seleccionado
+                // Apply class to selected header
                 th.classList.add('sort-' + currentOrder);
 
                 sortRows(table, index, currentOrder);
@@ -94,13 +94,13 @@
     }
 
     /**
-     * Ordenar filas de la tabla
+     * Sort table rows
      */
     function sortRows(table, columnIndex, order) {
         const tbody = table.querySelector('tbody');
         if (!tbody) return;
 
-        // Obtener todas las filas de datos válidas
+        // Get all valid data rows
         let allRows = Array.from(tbody.querySelectorAll('tr'));
         let rows = allRows.filter(function (row) {
             const cells = row.querySelectorAll('td');
@@ -126,14 +126,14 @@
                 const dateB = parseDateIgnoreTime(valB) || new Date(0);
                 comparison = dateA - dateB;
             } else {
-                // Comprobar si son IDs (formato #123)
+                // Check if values are IDs (format #123)
                 const idA = valA.startsWith('#') ? parseInt(valA.substring(1)) : NaN;
                 const idB = valB.startsWith('#') ? parseInt(valB.substring(1)) : NaN;
 
                 if (!isNaN(idA) && !isNaN(idB)) {
                     comparison = idA - idB;
                 } else {
-                    // Ordenación alfabética normal
+                    // Normal alphabetical sort
                     comparison = valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
                 }
             }
@@ -141,12 +141,12 @@
             return order === 'asc' ? comparison : -comparison;
         });
 
-        // Re-insertar filas ordenadas en el DOM
+        // Re-insert sorted rows into the DOM
         rows.forEach(row => tbody.appendChild(row));
 
-        // Actualizar paginación si existe
+        // Update pagination if it exists
         if (table._pagination) {
-            // Si hay filtros activos, usar la lógica de filtros para obtener las filas visibles
+            // If there are active filters, use filter logic to get visible rows
             const activeFilters = table.querySelectorAll('.filter-input');
             let hasActiveFilter = false;
             activeFilters.forEach(input => {
@@ -154,21 +154,21 @@
             });
 
             if (hasActiveFilter) {
-                // Re-aplicar filtros para mantener el estado
+                // Re-apply filters to maintain state
                 applyFilters(table);
             } else {
-                // Solo actualizar las filas originales y mostrar primera página
+                // Only update original rows and show first page
                 table._pagination.getRows = () => rows;
                 table._pagination.showPage(0);
             }
         }
 
-        // Re-aplicar resaltado
+        // Re-apply highlighting
         applyHighlight(table);
     }
 
     /**
-     * Paginación del lado del cliente
+     * Client-side pagination
      */
     function initPagination(table) {
         const tbody = table.querySelector('tbody');
@@ -176,10 +176,10 @@
             return;
         }
 
-        // Obtener todas las filas de datos
+        // Get all data rows
         let allRows = Array.from(tbody.querySelectorAll('tr'));
 
-        // Filtrar filas que tienen celdas y no son mensajes
+        // Filter rows that have cells and are not messages
         let rows = allRows.filter(function (row) {
             const cells = row.querySelectorAll('td');
             const hasCells = cells.length > 0;
@@ -191,13 +191,13 @@
         const totalRows = rows.length;
 
         if (totalRows <= ITEMS_PER_PAGE) {
-            return; // No necesita paginación
+            return; // No pagination needed
         }
 
         const card = table.closest('.card');
         if (!card) return;
 
-        // Crear controles de paginación si no existen
+        // Create pagination controls if they don't exist
         let pagination = card.querySelector('.search-pagination');
         if (!pagination) {
             const cardBody = card.querySelector('.card-body');
@@ -225,7 +225,7 @@
         const totalPages = Math.ceil(totalRows / ITEMS_PER_PAGE);
 
         function showPage(page) {
-            // Obtener las filas actuales (pueden estar filtradas)
+            // Get current rows (may be filtered)
             const currentRows = table._pagination ? table._pagination.getRows() : rows;
             const currentTotalRows = currentRows.length;
             const currentTotalPages = Math.ceil(currentTotalRows / ITEMS_PER_PAGE);
@@ -233,30 +233,30 @@
             const start = page * ITEMS_PER_PAGE;
             const end = Math.min(start + ITEMS_PER_PAGE, currentTotalRows);
 
-            // Primero ocultar todas las filas
+            // First hide all rows
             rows.forEach(function (row) {
                 row.style.display = 'none';
             });
 
-            // Luego mostrar solo las filas de la página actual que están en currentRows
+            // Then show only the rows for the current page that are in currentRows
             currentRows.forEach(function (row, index) {
                 if (index >= start && index < end) {
                     row.style.display = '';
                 }
             });
 
-            // Actualizar información
+            // Update info
             const startNum = currentTotalRows > 0 ? start + 1 : 0;
             const endNum = end;
             paginationInfo.textContent = `Showing ${startNum} - ${endNum} of ${currentTotalRows}`;
 
-            // Actualizar botones
+            // Update buttons
             prevBtn.disabled = (page === 0);
             nextBtn.disabled = (page >= currentTotalPages - 1);
 
             currentPage = page;
 
-            // Re-aplicar resaltado después de cambiar de página
+            // Re-apply highlighting after page change
             applyHighlight(table);
         }
 
@@ -272,27 +272,27 @@
             }
         });
 
-        // Inicializar primera página
+        // Initialize first page
         showPage(0);
 
-        // Guardar referencia para filtros
+        // Save reference for filters
         table._pagination = {
             showPage: showPage,
             getCurrentPage: () => currentPage,
             getTotalPages: () => Math.ceil((table._pagination.getRows().length) / ITEMS_PER_PAGE),
-            getRows: () => rows, // Filas originales sin filtrar
-            getFilteredRows: () => rows.filter(r => r.style.display !== 'none' && r.offsetParent !== null) // Filas visibles después de filtros
+            getRows: () => rows, // Original unfiltered rows
+            getFilteredRows: () => rows.filter(r => r.style.display !== 'none' && r.offsetParent !== null) // Visible rows after filters
         };
     }
 
     /**
-     * Detectar si una columna es de tipo fecha
+     * Detect if a column is a date type
      */
     function isDateColumn(headerText, table, columnIndex) {
         const text = headerText.trim().toLowerCase();
 
-        // Excluir explícitamente columnas de ID
-        const excludeKeywords = ['id', 'identificador'];
+        // Explicitly exclude ID columns
+        const excludeKeywords = ['id', 'identifier'];
         const hasExcludeKeyword = excludeKeywords.some(function (keyword) {
             return text === keyword || text === keyword + 's';
         });
@@ -301,20 +301,20 @@
             return false;
         }
 
-        const dateKeywords = ['date', 'fecha', 'update', 'actualización', 'created', 'creado', 'modified', 'modificado', 'time', 'tiempo'];
+        const dateKeywords = ['date', 'update', 'created', 'modified', 'time'];
 
-        // Verificar por palabras clave en el header
+        // Check for date keywords in the header
         const hasDateKeyword = dateKeywords.some(function (keyword) {
             return text.includes(keyword);
         });
 
-        // Si el header tiene palabras clave de fecha, verificar el contenido para confirmar
+        // If the header has date keywords, verify content to confirm
         if (hasDateKeyword) {
             const tbody = table.querySelector('tbody');
             if (tbody) {
                 const sampleRows = Array.from(tbody.querySelectorAll('tr:not(.no-results)')).slice(0, 5);
                 if (sampleRows.length === 0) {
-                    return true; // Si no hay filas, confiar en el header
+                    return true; // If no rows, trust the header
                 }
 
                 let dateCount = 0;
@@ -324,7 +324,7 @@
                     const cells = row.querySelectorAll('td');
                     if (cells[columnIndex]) {
                         const cellText = getCellText(cells[columnIndex]).trim();
-                        // Ignorar valores que son solo números (probablemente IDs)
+                        // Ignore values that are only numbers (probably IDs)
                         if (cellText && !/^\d+$/.test(cellText)) {
                             totalSamples++;
                             if (parseDateIgnoreTime(cellText) !== null) {
@@ -334,23 +334,23 @@
                     }
                 });
 
-                // Si hay muestras válidas y al menos la mitad son fechas, confirmar como fecha
+                // If there are valid samples and at least half are dates, confirm as date
                 if (totalSamples > 0 && dateCount >= Math.ceil(totalSamples / 2)) {
                     return true;
                 }
-                // Si no hay muestras válidas pero el header tiene palabra clave de fecha, confiar en el header
+                // If no valid samples but the header has a date keyword, trust the header
                 return totalSamples === 0;
             }
-            return true; // Si no hay tbody, confiar en el header
+            return true; // If no tbody, trust the header
         }
 
-        // Si el header NO tiene palabras clave de fecha, no considerar la columna como fecha
-        // (evita falsos positivos cuando valores numéricos coinciden casualmente con formatos de fecha)
+        // If the header does NOT have date keywords, don't consider the column as a date
+        // (avoids false positives when numeric values accidentally match date formats)
         return false;
     }
 
     /**
-     * Parsear fecha ignorando horas (solo año, mes y día)
+     * Parse date ignoring time (only year, month and day)
      */
     function parseDateIgnoreTime(cellText) {
         if (!cellText || cellText.trim() === '') {
@@ -360,8 +360,8 @@
         const text = cellText.trim();
         let date = null;
 
-        // Intentar múltiples formatos de fecha comunes
-        // Formato YYYY-MM-DD (ISO)
+        // Try multiple common date formats
+        // Format YYYY-MM-DD (ISO)
         if (/^\d{4}-\d{2}-\d{2}/.test(text)) {
             const match = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
             if (match) {
@@ -372,7 +372,7 @@
             }
         }
 
-        // Formato DD/MM/YYYY
+        // Format DD/MM/YYYY
         if (/^\d{2}\/\d{2}\/\d{4}/.test(text)) {
             const match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
             if (match) {
@@ -383,7 +383,7 @@
             }
         }
 
-        // Formato MM/DD/YYYY
+        // Format MM/DD/YYYY
         if (/^\d{2}\/\d{2}\/\d{4}/.test(text)) {
             const match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
             if (match) {
@@ -394,10 +394,10 @@
             }
         }
 
-        // Intentar parseo directo con Date (puede manejar varios formatos)
+        // Try direct parsing with Date (can handle various formats)
         date = new Date(text);
         if (!isNaN(date.getTime())) {
-            // Normalizar a medianoche para ignorar horas
+            // Normalize to midnight to ignore time
             date.setHours(0, 0, 0, 0);
             return date;
         }
@@ -406,7 +406,7 @@
     }
 
     /**
-     * Normalizar fecha a medianoche (00:00:00) para comparación
+     * Normalize date to midnight (00:00:00) for comparison
      */
     function normalizeDateToMidnight(date) {
         if (!date || !(date instanceof Date)) {
@@ -418,7 +418,7 @@
     }
 
     /**
-     * Filtros de tabla
+     * Table filters
      */
     function initFilters(table) {
         const thead = table.querySelector('thead');
@@ -427,13 +427,13 @@
         const headerRow = thead.querySelector('tr');
         if (!headerRow) return;
 
-        // Verificar si ya existe una fila de filtros
+        // Check if a filter row already exists
         const existingFilterRow = thead.querySelector('.table-filters');
         if (existingFilterRow) {
-            return; // Ya existe, no crear otra
+            return; // Already exists, don't create another
         }
 
-        // Crear fila de filtros
+        // Create filter row
         const filterRow = document.createElement('tr');
         filterRow.className = 'table-filters';
         const headers = headerRow.querySelectorAll('th');
@@ -442,14 +442,14 @@
             const filterCell = document.createElement('td');
             const columnText = th.textContent.trim().toLowerCase();
 
-            // Input de texto para la mayoría de columnas
+            // Text input for most columns
             if (columnText.includes('status')) {
-                // Select para status
+                // Select for status
                 const select = document.createElement('select');
                 select.className = 'form-control form-control-sm filter-input';
                 select.setAttribute('data-column-index', index);
                 select.innerHTML = '<option value="">All</option>';
-                // Obtener valores únicos de status de la tabla
+                // Get unique status values from the table
                 const statusValues = getUniqueColumnValues(table, index);
                 statusValues.forEach(function (val) {
                     const option = document.createElement('option');
@@ -459,15 +459,15 @@
                 });
                 filterCell.appendChild(select);
             } else if (isDateColumn(th.textContent, table, index)) {
-                // Contenedor para rango de fechas
+                // Container for date range
                 const dateRangeContainer = document.createElement('div');
                 dateRangeContainer.className = 'filter-date-range';
                 dateRangeContainer.setAttribute('data-column-index', index);
 
-                // Input "Desde"
+                // "From" input
                 const fromLabel = document.createElement('label');
                 fromLabel.className = 'filter-date-label';
-                fromLabel.textContent = 'Desde:';
+                fromLabel.textContent = 'From:';
                 fromLabel.setAttribute('for', 'filter-date-from-' + index);
 
                 const fromInput = document.createElement('input');
@@ -477,10 +477,10 @@
                 fromInput.setAttribute('data-column-index', index);
                 fromInput.setAttribute('data-date-type', 'from');
 
-                // Input "Hasta"
+                // "To" input
                 const toLabel = document.createElement('label');
                 toLabel.className = 'filter-date-label';
-                toLabel.textContent = 'Hasta:';
+                toLabel.textContent = 'To:';
                 toLabel.setAttribute('for', 'filter-date-to-' + index);
 
                 const toInput = document.createElement('input');
@@ -508,7 +508,7 @@
             filterRow.appendChild(filterCell);
         });
 
-        // Añadir celda con botón "Aplicar filtros"
+        // Add cell with "Apply Filters" button
         const buttonCell = document.createElement('td');
         buttonCell.colSpan = headers.length;
         buttonCell.className = 'text-end';
@@ -529,7 +529,7 @@
         buttonCell.appendChild(applyButton);
         buttonCell.appendChild(clearButton);
 
-        // Crear segunda fila para el botón
+        // Create second row for the button
         const buttonRow = document.createElement('tr');
         buttonRow.className = 'table-filters-actions';
         buttonRow.appendChild(buttonCell);
@@ -537,7 +537,7 @@
         thead.appendChild(filterRow);
         thead.appendChild(buttonRow);
 
-        // Event listeners para botones
+        // Event listeners for buttons
         applyButton.addEventListener('click', function () {
             applyFilters(table);
         });
@@ -546,7 +546,7 @@
             clearFilters(table);
         });
 
-        // Permitir Enter en los inputs para aplicar filtros
+        // Allow Enter on inputs to apply filters
         const filterInputs = filterRow.querySelectorAll('.filter-input');
         filterInputs.forEach(function (input) {
             input.addEventListener('keypress', function (e) {
@@ -557,7 +557,7 @@
             });
         });
 
-        // Para inputs de fecha, aplicar filtros automáticamente al cambiar
+        // For date inputs, apply filters automatically on change
         const dateInputs = filterRow.querySelectorAll('.filter-date-input');
         dateInputs.forEach(function (input) {
             input.addEventListener('change', function () {
@@ -567,12 +567,12 @@
     }
 
     /**
-     * Obtener texto de una celda (sin HTML, solo texto)
+     * Get text from a cell (no HTML, text only)
      */
     function getCellText(cell) {
         if (!cell) return '';
 
-        // Si hay HTML original guardado, usar ese texto
+        // If original HTML is saved, use that text
         const originalHTML = cell.getAttribute('data-original-html');
         if (originalHTML) {
             const tempDiv = document.createElement('div');
@@ -580,12 +580,12 @@
             return tempDiv.textContent || tempDiv.innerText || '';
         }
 
-        // Si no, usar textContent (que ignora HTML)
+        // Otherwise, use textContent (which ignores HTML)
         return cell.textContent || cell.innerText || '';
     }
 
     /**
-     * Aplicar filtros a la tabla
+     * Apply filters to the table
      */
     function applyFilters(table) {
         const tbody = table.querySelector('tbody');
@@ -598,10 +598,10 @@
             return;
         }
 
-        // Recopilar filtros activos (incluyendo rangos de fechas)
+        // Collect active filters (including date ranges)
         const activeFilters = [];
 
-        // Agrupar inputs de fecha por columna
+        // Group date inputs by column
         const dateFiltersByColumn = {};
         const dateRangeContainers = table.querySelectorAll('.filter-date-range');
         dateRangeContainers.forEach(function (container) {
@@ -611,13 +611,13 @@
 
             const cell = container.closest('td');
             if (cell && (cell.offsetParent === null || getComputedStyle(cell).display === 'none')) {
-                return; // La columna está oculta
+                return; // Column is hidden
             }
 
             const fromValue = fromInput ? fromInput.value.trim() : '';
             const toValue = toInput ? toInput.value.trim() : '';
 
-            // Si al menos uno de los dos tiene valor, considerar el filtro activo
+            // If at least one has a value, consider the filter active
             if (fromValue || toValue) {
                 dateFiltersByColumn[columnIndex] = {
                     type: 'date',
@@ -628,11 +628,11 @@
             }
         });
 
-        // Recopilar filtros de texto/select normales
+        // Collect normal text/select filters
         Array.from(allFilterInputs).forEach(function (input) {
             if (input.disabled) return;
 
-            // Ignorar inputs de fecha (ya los procesamos arriba)
+            // Ignore date inputs (already processed above)
             if (input.classList.contains('filter-date-input')) {
                 return;
             }
@@ -641,7 +641,7 @@
 
             const cell = input.closest('td');
             if (cell && (cell.offsetParent === null || getComputedStyle(cell).display === 'none')) {
-                // La columna está oculta, no aplicar este filtro
+                // Column is hidden, don't apply this filter
                 return;
             }
 
@@ -653,12 +653,12 @@
             });
         });
 
-        // Combinar todos los filtros activos
+        // Combine all active filters
         const allActiveFilters = activeFilters.concat(Object.values(dateFiltersByColumn));
 
-        // Si no hay filtros activos, mostrar todas las filas y restaurar paginación
+        // If no active filters, show all rows and restore pagination
         if (allActiveFilters.length === 0) {
-            // Obtener todas las filas válidas
+            // Get all valid rows
             let allRows = Array.from(tbody.querySelectorAll('tr'));
             let rows = allRows.filter(function (row) {
                 const cells = row.querySelectorAll('td');
@@ -686,7 +686,7 @@
             return;
         }
 
-        // Obtener todas las filas válidas (sin contar mensajes de "no results")
+        // Get all valid rows (excluding "no results" messages)
         let allRows = Array.from(tbody.querySelectorAll('tr'));
         let rows = allRows.filter(function (row) {
             const cells = row.querySelectorAll('td');
@@ -696,7 +696,7 @@
             return hasCells && !isNoResults;
         });
 
-        // Aplicar filtros
+        // Apply filters
         const filteredRows = [];
         rows.forEach(function (row) {
             let showRow = true;
@@ -712,19 +712,19 @@
                 }
 
                 if (filter.type === 'date') {
-                    // Filtrado por rango de fechas
+                    // Date range filtering
                     const cellText = getCellText(cell).trim();
                     const cellDate = parseDateIgnoreTime(cellText);
 
                     if (cellDate === null) {
-                        // Si la celda no contiene una fecha válida, ocultar la fila
+                        // If the cell doesn't contain a valid date, hide the row
                         showRow = false;
                         return;
                     }
 
                     const normalizedCellDate = normalizeDateToMidnight(cellDate);
 
-                    // Aplicar lógica de rango
+                    // Apply range logic
                     if (filter.from) {
                         const fromDate = normalizeDateToMidnight(new Date(filter.from));
                         if (normalizedCellDate < fromDate) {
@@ -741,7 +741,7 @@
                         }
                     }
                 } else {
-                    // Filtrado de texto normal
+                    // Normal text filtering
                     const filterValue = filter.value.toLowerCase();
                     const cellText = getCellText(cell).trim().toLowerCase();
                     if (!cellText.includes(filterValue)) {
@@ -750,7 +750,7 @@
                 }
             });
 
-            // Guardar el estado del filtro en un atributo data
+            // Save filter state in a data attribute
             row.setAttribute('data-filter-visible', showRow ? 'true' : 'false');
 
             if (showRow) {
@@ -758,38 +758,38 @@
             }
         });
 
-        // Re-aplicar paginación con filas filtradas
+        // Re-apply pagination with filtered rows
         if (table._pagination) {
-            // Actualizar la función getRows para devolver solo las filas filtradas
+            // Update getRows function to return only filtered rows
             table._pagination.getRows = () => filteredRows;
 
             if (filteredRows.length > 0) {
-                // Mostrar paginación si estaba oculta
+                // Show pagination if it was hidden
                 const pagination = table.closest('.card').querySelector('.search-pagination');
                 if (pagination) {
                     pagination.style.display = '';
                 }
-                // Resetear a la primera página con las filas filtradas
+                // Reset to first page with filtered rows
                 table._pagination.showPage(0);
             } else {
-                // Si no hay filas visibles, ocultar paginación
+                // If no visible rows, hide pagination
                 const pagination = table.closest('.card').querySelector('.search-pagination');
                 if (pagination) {
                     pagination.style.display = 'none';
                 }
-                // Ocultar todas las filas
+                // Hide all rows
                 rows.forEach(function (row) {
                     row.style.display = 'none';
                 });
             }
         }
 
-        // Re-aplicar resaltado solo a filas visibles
+        // Re-apply highlighting only to visible rows
         applyHighlight(table);
     }
 
     /**
-     * Limpiar filtros
+     * Clear filters
      */
     function clearFilters(table) {
         const filterInputs = table.querySelectorAll('.filter-input');
@@ -797,7 +797,7 @@
             input.value = '';
         });
 
-        // Obtener todas las filas originales
+        // Get all original rows
         const tbody = table.querySelector('tbody');
         if (!tbody) return;
 
@@ -810,30 +810,30 @@
             return hasCells && !isNoResults;
         });
 
-        // Remover atributos de filtro
+        // Remove filter attributes
         rows.forEach(function (row) {
             row.removeAttribute('data-filter-visible');
         });
 
-        // Restaurar paginación original
+        // Restore original pagination
         if (table._pagination) {
             const card = table.closest('.card');
             const pagination = card ? card.querySelector('.search-pagination') : null;
             if (pagination) {
                 pagination.style.display = '';
             }
-            // Restaurar lista original de filas
+            // Restore original row list
             table._pagination.getRows = () => rows;
-            // Mostrar primera página con todas las filas
+            // Show first page with all rows
             table._pagination.showPage(0);
         }
 
-        // Re-aplicar resaltado
+        // Re-apply highlighting
         applyHighlight(table);
     }
 
     /**
-     * Obtener valores únicos de una columna
+     * Get unique values from a column
      */
     function getUniqueColumnValues(table, columnIndex) {
         const tbody = table.querySelector('tbody');
@@ -856,7 +856,7 @@
     }
 
     /**
-     * Resaltar términos de búsqueda preservando enlaces HTML
+     * Highlight search terms while preserving HTML links
      */
     function applyHighlight(table) {
         const searchQuery = getSearchQuery();
@@ -874,22 +874,22 @@
 
             const cells = row.querySelectorAll('td');
             cells.forEach(function (cell) {
-                // Guardar HTML original si no está guardado
+                // Save original HTML if not already saved
                 if (!cell.hasAttribute('data-original-html')) {
                     cell.setAttribute('data-original-html', cell.innerHTML);
                 }
 
-                // Obtener HTML original
+                // Get original HTML
                 const originalHTML = cell.getAttribute('data-original-html');
 
-                // Crear un elemento temporal para trabajar con el HTML
+                // Create a temporary element to work with the HTML
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = originalHTML;
 
-                // Función recursiva para resaltar texto en nodos
+                // Recursive function to highlight text in nodes
                 function highlightTextNodes(node) {
                     if (node.nodeType === Node.TEXT_NODE) {
-                        // Es un nodo de texto, aplicar resaltado
+                        // It's a text node, apply highlighting
                         let text = node.textContent;
                         let highlightedText = text;
 
@@ -898,20 +898,20 @@
                             highlightedText = highlightedText.replace(regex, '<mark>$1</mark>');
                         });
 
-                        // Si hay cambios, reemplazar el nodo de texto
+                        // If there are changes, replace the text node
                         if (highlightedText !== text) {
                             const tempSpan = document.createElement('span');
                             tempSpan.innerHTML = highlightedText;
 
-                            // Reemplazar el nodo de texto con los nodos del span
+                            // Replace the text node with the span's nodes
                             while (tempSpan.firstChild) {
                                 node.parentNode.insertBefore(tempSpan.firstChild, node);
                             }
                             node.parentNode.removeChild(node);
                         }
                     } else if (node.nodeType === Node.ELEMENT_NODE) {
-                        // Es un elemento, procesar sus hijos recursivamente
-                        // No procesar nodos <mark> para evitar anidación
+                        // It's an element, process its children recursively
+                        // Don't process <mark> nodes to avoid nesting
                         if (node.tagName !== 'MARK') {
                             const children = Array.from(node.childNodes);
                             children.forEach(highlightTextNodes);
@@ -919,18 +919,18 @@
                     }
                 }
 
-                // Procesar todos los nodos
+                // Process all nodes
                 const allNodes = Array.from(tempDiv.childNodes);
                 allNodes.forEach(highlightTextNodes);
 
-                // Restaurar el HTML procesado
+                // Restore the processed HTML
                 cell.innerHTML = tempDiv.innerHTML;
             });
         });
     }
 
     /**
-     * Obtener query de búsqueda desde la URL o input
+     * Get search query from URL or input
      */
     function getSearchQuery() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -938,14 +938,14 @@
     }
 
     /**
-     * Escapar caracteres especiales para regex
+     * Escape special characters for regex
      */
     function escapeRegex(str) {
         return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
     /**
-     * Gestión de columnas visibles
+     * Visible column management
      */
     function initColumnToggle(table) {
         const thead = table.querySelector('thead');
@@ -957,17 +957,17 @@
         const tableId = table.getAttribute('id');
         const storageKey = STORAGE_PREFIX + tableId;
 
-        // Cargar preferencias guardadas
+        // Load saved preferences
         const savedPreferences = loadColumnPreferences(storageKey);
 
-        // Añadir botón de gestión de columnas
+        // Add column management button
         const card = table.closest('.card');
         if (card) {
             const cardHeader = card.querySelector('.card-header');
             if (cardHeader) {
                 let columnToggleBtn = cardHeader.querySelector('.column-toggle-btn');
                 if (!columnToggleBtn) {
-                    // Contenedor para el dropdown
+                    // Container for the dropdown
                     const dropdownContainer = document.createElement('div');
                     dropdownContainer.className = 'dropdown';
 
@@ -977,7 +977,7 @@
                     columnToggleBtn.setAttribute('data-bs-toggle', 'dropdown');
                     columnToggleBtn.setAttribute('aria-expanded', 'false');
 
-                    // Crear menú desplegable
+                    // Create dropdown menu
                     const dropdown = document.createElement('div');
                     dropdown.className = 'dropdown-menu column-toggle-menu';
                     dropdown.setAttribute('aria-labelledby', 'columnToggle');
@@ -1005,11 +1005,11 @@
                         dropdown.appendChild(menuItem);
                     });
 
-                    // Inicializar dropdown (Bootstrap o manual)
+                    // Initialize dropdown (Bootstrap or manual)
                     if (typeof bootstrap !== 'undefined') {
                         new bootstrap.Dropdown(columnToggleBtn);
                     } else {
-                        // Fallback manual para dropdown
+                        // Manual fallback for dropdown
                         columnToggleBtn.addEventListener('click', function (e) {
                             e.preventDefault();
                             e.stopPropagation();
@@ -1017,7 +1017,7 @@
                             dropdownContainer.classList.toggle('show');
                         });
 
-                        // Cerrar al hacer clic fuera
+                        // Close when clicking outside
                         document.addEventListener('click', function (e) {
                             if (!dropdownContainer.contains(e.target)) {
                                 dropdown.classList.remove('show');
@@ -1026,7 +1026,7 @@
                         });
                     }
 
-                    // Event listeners para checkboxes
+                    // Event listeners for checkboxes
                     dropdown.querySelectorAll('.column-toggle-checkbox').forEach(function (checkbox) {
                         checkbox.addEventListener('change', function () {
                             const columnIndex = parseInt(this.getAttribute('data-column-index'));
@@ -1039,7 +1039,7 @@
             }
         }
 
-        // Aplicar preferencias guardadas
+        // Apply saved preferences
         if (savedPreferences) {
             Object.keys(savedPreferences).forEach(function (index) {
                 const isVisible = savedPreferences[index] !== false;
@@ -1049,20 +1049,20 @@
     }
 
     /**
-     * Mostrar/ocultar columna
+     * Show/hide column
      */
     function toggleColumn(table, columnIndex, isVisible) {
         const thead = table.querySelector('thead');
         const tbody = table.querySelector('tbody');
         if (!thead || !tbody) return;
 
-        // Ocultar/mostrar header (solo los <th>)
+        // Hide/show header (only <th> elements)
         const headerCells = thead.querySelectorAll('th');
         if (headerCells[columnIndex]) {
             headerCells[columnIndex].style.display = isVisible ? '' : 'none';
         }
 
-        // Ocultar/mostrar celda de filtro correspondiente
+        // Hide/show corresponding filter cell
         const filterRow = thead.querySelector('tr.table-filters');
         if (filterRow) {
             const filterCells = filterRow.querySelectorAll('td');
@@ -1070,7 +1070,7 @@
             if (filterCell) {
                 filterCell.style.display = isVisible ? '' : 'none';
 
-                // Manejar inputs de fecha (rango)
+                // Handle date inputs (range)
                 const dateRangeContainer = filterCell.querySelector('.filter-date-range');
                 if (dateRangeContainer) {
                     const dateInputs = dateRangeContainer.querySelectorAll('.filter-date-input');
@@ -1083,14 +1083,14 @@
                         }
                     });
                 } else {
-                    // Manejar inputs normales (texto o select)
+                    // Handle normal inputs (text or select)
                     const filterInput = filterCell.querySelector('.filter-input');
                     if (filterInput) {
                         if (isVisible) {
-                            // Volver a habilitar filtro cuando la columna se muestra
+                            // Re-enable filter when column is shown
                             filterInput.disabled = false;
                         } else {
-                            // Limpiar y deshabilitar filtro cuando la columna se oculta
+                            // Clear and disable filter when column is hidden
                             filterInput.value = '';
                             filterInput.disabled = true;
                         }
@@ -1099,7 +1099,7 @@
             }
         }
 
-        // Ocultar/mostrar celdas de datos
+        // Hide/show data cells
         const rows = tbody.querySelectorAll('tr');
         rows.forEach(function (row) {
             const cells = row.querySelectorAll('td');
@@ -1110,7 +1110,7 @@
     }
 
     /**
-     * Guardar preferencias de columnas en cookies
+     * Save column preferences to cookies
      */
     function saveColumnPreferences(storageKey, table) {
         const preferences = {};
@@ -1126,7 +1126,7 @@
 
         try {
             const jsonData = JSON.stringify(preferences);
-            // Guardar en cookie con expiración de 365 días
+            // Save to cookie with 365-day expiration
             setCookie(storageKey, jsonData, 365);
         } catch (e) {
             console.warn('GlobalSearch: Could not save column preferences:', e);
@@ -1134,7 +1134,7 @@
     }
 
     /**
-     * Cargar preferencias de columnas desde cookies
+     * Load column preferences from cookies
      */
     function loadColumnPreferences(storageKey) {
         try {
@@ -1150,11 +1150,11 @@
         }
     }
 
-    // Mostrar loader del frontend
+    // Show frontend loader
     function showFrontendLoader() {
         const resultsContainer = document.getElementById('globalsearch-results');
         if (resultsContainer) {
-            // Crear overlay de carga si no existe
+            // Create loading overlay if it doesn't exist
             let loader = document.getElementById('globalsearch-frontend-loader');
             if (!loader) {
                 loader = document.createElement('div');
@@ -1174,7 +1174,7 @@
         }
     }
 
-    // Ocultar loader del frontend
+    // Hide frontend loader
     function hideFrontendLoader() {
         const loader = document.getElementById('globalsearch-frontend-loader');
         if (loader) {
@@ -1186,16 +1186,16 @@
         }
     }
 
-    // Inicializar cuando el DOM esté listo
+    // Initialize when the DOM is ready
     function initialize() {
-        // Mostrar loader del frontend
+        // Show frontend loader
         showFrontendLoader();
 
         const tables = document.querySelectorAll('.search-results-table');
 
         if (tables.length === 0) {
             hideFrontendLoader();
-            // Intentar de nuevo después de un delay
+            // Try again after a delay
             setTimeout(function () {
                 const retryTables = document.querySelectorAll('.search-results-table');
                 if (retryTables.length > 0) {
@@ -1207,14 +1207,14 @@
             return;
         }
 
-        // Inicializar tablas (esto puede tardar)
+        // Initialize tables (this may take a moment)
         setTimeout(function () {
             initAllTables();
             hideFrontendLoader();
         }, 50);
     }
 
-    // Esperar a que todo esté completamente cargado
+    // Wait for everything to be fully loaded
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () {
             setTimeout(initialize, 100);
@@ -1222,14 +1222,13 @@
     } else if (document.readyState === 'interactive') {
         setTimeout(initialize, 100);
     } else {
-        // DOM completamente cargado
+        // DOM fully loaded
         setTimeout(initialize, 100);
     }
 
-    // También intentar cuando la ventana esté completamente cargada
+    // Also try when the window is fully loaded
     window.addEventListener('load', function () {
         setTimeout(initialize, 200);
     });
 
 })();
-
