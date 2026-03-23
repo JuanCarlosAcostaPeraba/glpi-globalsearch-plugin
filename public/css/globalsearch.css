@@ -1,19 +1,19 @@
-/* Ocultar barra de búsqueda nativa de GLPI para evitar confusiones */
+/* Hide native GLPI search bar to avoid confusion */
 form[role="search"][data-submit-once] input[name="globalsearch"] {
     display: none !important;
 }
 
-/* Ocultar también el contenedor completo del formulario de búsqueda nativo */
+/* Also hide the full container of the native search form */
 form[action*="front/search.php"][role="search"][data-submit-once] {
     display: none !important;
 }
 
-/* Botón de búsqueda global en el header */
+/* Global search button in the header */
 .globalsearch-btn {
     flex-shrink: 0;
 }
 
-/* Modal de búsqueda */
+/* Search modal */
 .globalsearch-modal {
     position: fixed;
     inset: 0;
@@ -42,7 +42,7 @@ form[action*="front/search.php"][role="search"][data-submit-once] {
     z-index: 10000;
 }
 
-/* Animación suave al abrir */
+/* Smooth animation on open */
 .globalsearch-modal:not(.d-none) .globalsearch-dialog {
     animation: slideDown 0.2s ease-out;
 }
@@ -59,7 +59,7 @@ form[action*="front/search.php"][role="search"][data-submit-once] {
     }
 }
 
-/* Controles de rango de fechas */
+/* Date range controls */
 .filter-date-range {
     display: flex;
     flex-direction: column;
@@ -78,7 +78,7 @@ form[action*="front/search.php"][role="search"][data-submit-once] {
     width: 100%;
 }
 
-/* Ajustes para que los controles de fecha se vean bien en la fila de filtros */
+/* Adjustments to make date controls look good in the filter row */
 .table-filters td {
     vertical-align: middle;
 }
@@ -87,7 +87,7 @@ form[action*="front/search.php"][role="search"][data-submit-once] {
     padding: 0.25rem 0;
 }
 
-/* Ordenación de tablas */
+/* Table sorting */
 .search-results-table th {
     cursor: pointer;
     position: relative;
@@ -122,7 +122,7 @@ form[action*="front/search.php"][role="search"][data-submit-once] {
     opacity: 1;
 }
 
-/* Ajuste para que el icono no pise el texto */
+/* Adjustment so the icon doesn't overlap the text */
 .search-results-table th {
     padding-right: 1.5rem !important;
 }

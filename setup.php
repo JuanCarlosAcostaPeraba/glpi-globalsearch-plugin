@@ -11,35 +11,35 @@ define('GLOBALSEARCH_MIN_GLPI', '11.0.0');
 define('GLOBALSEARCH_MAX_GLPI', '11.0.99');
 
 /**
- * Inicialización del plugin (GLPI la ejecuta al cargar el plugin)
+ * Plugin initialization (executed by GLPI when loading the plugin)
  */
 function plugin_init_globalsearch()
 {
     global $PLUGIN_HOOKS, $CFG_GLPI;
 
-    // Marcar el plugin como compatible con CSRF
+    // Mark the plugin as CSRF compliant
     $PLUGIN_HOOKS['csrf_compliant']['globalsearch'] = true;
 
-    // Inyectar nuestro JS en la interfaz central
+    // Inject our JS into the central interface
     // Load translated strings for JS before the main script
     $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT]['globalsearch'][] = 'front/lang.php';
     // Main JS reads window.GLOBALSEARCH_LANG
     $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT]['globalsearch'][] = 'js/globalsearch_header.js';
 
-    // Opcional: CSS propio para el modal
+    // Optional: Custom CSS for the modal
     $PLUGIN_HOOKS[Hooks::ADD_CSS]['globalsearch'][] = 'css/globalsearch.css';
 
-    // Añadir enlace de configuración en el menú de Configuración > Plugins
+    // Add configuration link in the Configuration > Plugins menu
     if (Session::haveRight('config', UPDATE)) {
         $PLUGIN_HOOKS['config_page']['globalsearch'] = 'front/config.form.php';
     }
 
-    // Registrar la clase de configuración
+    // Register the configuration class
     Plugin::registerClass('PluginGlobalsearchConfig', ['addtabon' => 'Config']);
 }
 
 /**
- * Información del plugin (pantalla de plugins)
+ * Plugin information (plugins screen)
  */
 function plugin_version_globalsearch()
 {
@@ -60,13 +60,13 @@ function plugin_version_globalsearch()
 }
 
 /**
- * Instalación del plugin
+ * Plugin installation
  */
 function plugin_globalsearch_install()
 {
     global $DB;
 
-    // Compilar archivos .po a .mo si msgfmt está disponible
+    // Compile .po to .mo files if msgfmt is available
     $locales_dir = dirname(__FILE__) . '/locales';
     if (is_dir($locales_dir)) {
         $po_files = glob($locales_dir . '/*.po');
@@ -79,12 +79,12 @@ function plugin_globalsearch_install()
         }
     }
 
-    // Crear tabla de configuración
+    // Create configuration table
     if (!$DB->tableExists('glpi_plugin_globalsearch_configs')) {
         $query = "CREATE TABLE `glpi_plugin_globalsearch_configs` (
             `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-            `search_type` VARCHAR(50) NOT NULL COMMENT 'Tipo de búsqueda: Ticket, Project, Document, etc.',
-            `is_enabled` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = activo, 0 = desactivado',
+            `search_type` VARCHAR(50) NOT NULL COMMENT 'Search type: Ticket, Project, Document, etc.',
+            `is_enabled` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = active, 0 = disabled',
             `date_mod` TIMESTAMP NULL DEFAULT NULL,
             PRIMARY KEY (`id`),
             UNIQUE KEY `search_type` (`search_type`)
@@ -92,7 +92,7 @@ function plugin_globalsearch_install()
 
         $DB->doQuery($query);
 
-        // Insertar valores por defecto (todos activos)
+        // Insert default values (all active)
         $default_types = [
             'Ticket',
             'Project',
@@ -116,7 +116,7 @@ function plugin_globalsearch_install()
 }
 
 /**
- * Desinstalación del plugin
+ * Plugin uninstallation
  */
 function plugin_globalsearch_uninstall()
 {
@@ -126,11 +126,11 @@ function plugin_globalsearch_uninstall()
 }
 
 /**
- * Actualización del plugin
+ * Plugin update
  */
 function plugin_globalsearch_upgrade()
 {
-    // Re-compilar archivos .po a .mo en cada actualización
+    // Re-compile .po to .mo files on each update
     $locales_dir = dirname(__FILE__) . '/locales';
     if (is_dir($locales_dir)) {
         $po_files = glob($locales_dir . '/*.po');
@@ -147,11 +147,11 @@ function plugin_globalsearch_upgrade()
 
 
 /**
- * Requisitos mínimos
+ * Minimum prerequisites
  */
 function plugin_globalsearch_check_prerequisites()
 {
-    // Comprobar versión de GLPI para asegurar compatibilidad con la rama 11.x
+    // Check GLPI version to ensure compatibility with the 11.x branch
     if (version_compare(GLPI_VERSION, GLOBALSEARCH_MIN_GLPI, 'lt')) {
         echo sprintf(
             'This plugin requires GLPI >= %s. Current version: %s. For GLPI 10.x, please use plugin version 1.5.1',
@@ -174,7 +174,7 @@ function plugin_globalsearch_check_prerequisites()
 }
 
 /**
- * Estado de configuración (simple por ahora)
+ * Configuration status (simple for now)
  */
 function plugin_globalsearch_check_config($verbose = false)
 {

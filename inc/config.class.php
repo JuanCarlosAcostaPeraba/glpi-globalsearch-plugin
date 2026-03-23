@@ -9,9 +9,9 @@ class PluginGlobalsearchConfig extends CommonDBTM
     static $rightname = 'config';
 
     /**
-     * Obtiene la configuración de todos los tipos de búsqueda
+     * Gets configuration for all search types
      *
-     * @return array Array asociativo [search_type => is_enabled]
+     * @return array Associative array [search_type => is_enabled]
      */
     public static function getConfig()
     {
@@ -31,9 +31,9 @@ class PluginGlobalsearchConfig extends CommonDBTM
     }
 
     /**
-     * Actualiza la configuración
+     * Updates configuration
      *
-     * @param array $data Array asociativo [search_type => is_enabled]
+     * @param array $data Associative array [search_type => is_enabled]
      * @return bool
      */
     public static function updateConfig($data)
@@ -57,7 +57,7 @@ class PluginGlobalsearchConfig extends CommonDBTM
     }
 
     /**
-     * Verifica si un tipo de búsqueda está habilitado
+     * Checks if a search type is enabled
      *
      * @param string $search_type
      * @return bool
@@ -77,12 +77,12 @@ class PluginGlobalsearchConfig extends CommonDBTM
             return (bool)$row['is_enabled'];
         }
 
-        // Por defecto, si no existe, está habilitado
+        // By default, if it doesn't exist, it is enabled
         return true;
     }
 
     /**
-     * Obtiene los nombres traducidos de los tipos de búsqueda
+     * Gets translated names for search types
      *
      * @return array
      */
@@ -100,7 +100,7 @@ class PluginGlobalsearchConfig extends CommonDBTM
     }
 
     /**
-     * Muestra el formulario de configuración
+     * Shows configuration form
      */
     public function showConfigForm()
     {
