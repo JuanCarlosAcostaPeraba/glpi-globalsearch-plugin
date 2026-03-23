@@ -21,6 +21,9 @@ function plugin_init_globalsearch()
     $PLUGIN_HOOKS['csrf_compliant']['globalsearch'] = true;
 
     // Inyectar nuestro JS en la interfaz central
+    // Load translated strings for JS before the main script
+    $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT]['globalsearch'][] = 'front/lang.php';
+    // Main JS reads window.GLOBALSEARCH_LANG
     $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT]['globalsearch'][] = 'js/globalsearch_header.js';
 
     // Opcional: CSS propio para el modal

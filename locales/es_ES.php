@@ -60,6 +60,16 @@ $LANG['plugin_globalsearch'] = [
     'configure' => 'Configurar',
     'save' => 'Guardar',
     'cancel' => 'Cancelar',
+
+    // Cadenas para la interfaz JavaScript
+    'Advanced global search' => 'Búsqueda global avanzada',
+    'Global search' => 'Búsqueda global',
+    'Close' => 'Cerrar',
+    'Search tickets, projects (min. 3 characters)...' => 'Buscar tickets, proyectos (mín. 3 caracteres)...',
+    'Search by ID (e.g. #123), exact phrases (e.g. "web server") or individual words.' => 'Busca por ID (ej: #123), frases exactas (ej: "servidor web") o palabras sueltas.',
+    'Searching…' => 'Buscando…',
+    'Cancel' => 'Cancelar',
+    'Search' => 'Buscar',
 ];
 
 return $LANG['plugin_globalsearch'];
