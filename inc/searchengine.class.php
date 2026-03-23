@@ -615,6 +615,27 @@ class PluginGlobalsearchSearchEngine
             $where = $this->getMultiWordCriteria($search_fields);
         }
 
+        // Enhanced search: match documents if any of their notes match the criteria
+        // Notes are stored in glpi_notepads with polymorphic association
+        $notepad_subquery_criteria = $this->getMultiWordCriteria(['content']);
+        if (!empty($notepad_subquery_criteria) && !$this->id_only) {
+            $notepad_match = [
+                'glpi_documents.id' => [
+                    'IN',
+                    new QuerySubQuery([
+                        'SELECT' => 'items_id',
+                        'FROM'   => 'glpi_notepads',
+                        'WHERE'  => array_merge(
+                            $notepad_subquery_criteria,
+                            ['itemtype' => 'Document']
+                        )
+                    ])
+                ]
+            ];
+            // Combine document field matches with notepad content matches
+            $where = ['OR' => array_filter([$where, $notepad_match])];
+        }
+
         $criteria = [
             'SELECT' => [
                 'glpi_documents.id',
