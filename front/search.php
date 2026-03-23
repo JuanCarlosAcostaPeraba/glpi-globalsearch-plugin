@@ -33,10 +33,7 @@ if ($query !== '') {
     $results = $engine->searchAll();  // Executes Tickets, Project, etc.
 }
 
-// Debug: verify what we are getting
-error_log("Query: " . $query);
-error_log("Results Tickets: " . count($results['Ticket'] ?? []));
-error_log("Results Projects: " . count($results['Project'] ?? []));
+
 
 // Get plugin web path for JS script
 $plugin_webroot = Plugin::getWebDir('globalsearch');

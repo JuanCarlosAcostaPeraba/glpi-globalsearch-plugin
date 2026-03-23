@@ -84,8 +84,6 @@ globalsearch/
 ├── front/
 │   ├── search.php             # Search results page
 │   └── config.form.php        # Configuration form
-├── install/
-│   └── install.php            # Installation script
 ├── public/
 │   ├── js/
 │   │   ├── globalsearch_header.js # Frontend override

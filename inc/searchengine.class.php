@@ -585,7 +585,7 @@ class PluginGlobalsearchSearchEngine
         $search_fields = ['glpi_documents.name', 'glpi_documents.filename', 'glpi_documents.comment'];
 
         if (is_numeric($this->raw_query)) {
-            // Criterio por ID
+            // Criterion by ID
             $id_criteria = ['glpi_documents.id' => $this->raw_query];
 
             if ($this->id_only) {
@@ -996,7 +996,7 @@ class PluginGlobalsearchSearchEngine
         $search_fields = ['glpi_projecttasks.name', 'glpi_projecttasks.content', 'glpi_projecttasks.comment'];
 
         if (is_numeric($this->raw_query)) {
-            // Criterio por ID
+            // Criterion by ID
             $id_criteria = ['glpi_projecttasks.id' => $this->raw_query];
 
             if ($this->id_only) {
