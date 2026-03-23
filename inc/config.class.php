@@ -89,13 +89,13 @@ class PluginGlobalsearchConfig extends CommonDBTM
     public static function getSearchTypeNames()
     {
         return [
-            'Ticket'      => _n('Ticket', 'Tickets', 2),
-            'Project'     => _n('Project', 'Projects', 2),
-            'Document'    => _n('Document', 'Documents', 2),
-            'Software'    => _n('Software', 'Software', 2),
-            'User'        => _n('User', 'Users', 2),
-            'TicketTask'  => __('Ticket tasks'),
-            'ProjectTask' => __('Project tasks')
+            'Ticket'      => _n('Ticket', 'Tickets', 2, 'globalsearch'),
+            'Project'     => _n('Project', 'Projects', 2, 'globalsearch'),
+            'Document'    => _n('Document', 'Documents', 2, 'globalsearch'),
+            'Software'    => _n('Software', 'Software', 2, 'globalsearch'),
+            'User'        => _n('User', 'Users', 2, 'globalsearch'),
+            'TicketTask'  => __('Ticket tasks', 'globalsearch'),
+            'ProjectTask' => __('Project tasks', 'globalsearch')
         ];
     }
 
@@ -125,14 +125,14 @@ class PluginGlobalsearchConfig extends CommonDBTM
             echo "<td width='50%'><strong>" . $label . "</strong></td>";
             echo "<td>";
             echo "<input type='checkbox' name='config[{$type}]' value='1' {$checked} />";
-            echo " " . __('Enable search in this type');
+            echo " " . __('Enable search in this type', 'globalsearch');
             echo "</td>";
             echo "</tr>";
         }
 
         echo "<tr class='tab_bg_2'>";
         echo "<td colspan='2' class='center'>";
-        echo "<input type='submit' name='update_config' value='" . __('Save') . "' class='btn btn-primary'/>";
+        echo "<input type='submit' name='update_config' value='" . __('Save', 'globalsearch') . "' class='btn btn-primary'/>";
         echo "</td>";
         echo "</tr>";
 

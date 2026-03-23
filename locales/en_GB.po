@@ -1,0 +1,163 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Global Search\n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: en_GB\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.4.2\n"
+
+msgid "Global Search Enhancer"
+msgstr "Global Search Enhancer"
+
+msgid "Global Search Configuration"
+msgstr "Global Search Configuration"
+
+msgid "Configuration saved successfully"
+msgstr "Configuration saved successfully"
+
+msgid "Error saving configuration"
+msgstr "Error saving configuration"
+
+msgid "Search Types"
+msgstr "Search Types"
+
+msgid "Enable search in this type"
+msgstr "Enable search in this type"
+
+msgid "Search Results"
+msgstr "Search Results"
+
+msgid "No results found"
+msgstr "No results found"
+
+msgid "Loading..."
+msgstr "Loading..."
+
+msgid "Loading search results..."
+msgstr "Loading search results..."
+
+msgid "Results for"
+msgstr "Results for"
+
+msgid "Showing results"
+msgstr "Showing results"
+
+msgid "Ticket"
+msgid_plural "Tickets"
+msgstr[0] "Ticket"
+msgstr[1] "Tickets"
+
+msgid "Project"
+msgid_plural "Projects"
+msgstr[0] "Project"
+msgstr[1] "Projects"
+
+msgid "Document"
+msgid_plural "Documents"
+msgstr[0] "Document"
+msgstr[1] "Documents"
+
+msgid "Software"
+msgid_plural "Software"
+msgstr[0] "Software"
+msgstr[1] "Software"
+
+msgid "User"
+msgid_plural "Users"
+msgstr[0] "User"
+msgstr[1] "Users"
+
+msgid "Ticket tasks"
+msgstr "Ticket tasks"
+
+msgid "Project tasks"
+msgstr "Project tasks"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Assigned to"
+msgstr "Assigned to"
+
+msgid "Technician"
+msgstr "Technician"
+
+msgid "Entity"
+msgstr "Entity"
+
+msgid "Date"
+msgstr "Date"
+
+msgid "Modified"
+msgstr "Modified"
+
+msgid "Created"
+msgstr "Created"
+
+msgid "Closed"
+msgstr "Closed"
+
+msgid "Category"
+msgstr "Category"
+
+msgid "Manufacturer"
+msgstr "Manufacturer"
+
+msgid "Phone"
+msgstr "Phone"
+
+msgid "Mobile"
+msgstr "Mobile"
+
+msgid "Related Ticket"
+msgstr "Related Ticket"
+
+msgid "Related Project"
+msgstr "Related Project"
+
+msgid "Please enter at least 3 characters"
+msgstr "Please enter at least 3 characters"
+
+msgid "This search type is disabled in configuration"
+msgstr "This search type is disabled in configuration"
+
+msgid "You do not have permission to view this type of item"
+msgstr "You do not have permission to view this type of item"
+
+msgid "Search"
+msgstr "Search"
+
+msgid "Clear"
+msgstr "Clear"
+
+msgid "Configure"
+msgstr "Configure"
+
+msgid "Save"
+msgstr "Save"
+
+msgid "Cancel"
+msgstr "Cancel"
+
+msgid "Advanced global search"
+msgstr "Advanced global search"
+
+msgid "Global search"
+msgstr "Global search"
+
+msgid "Close"
+msgstr "Close"
+
+msgid "Search tickets, projects (min. 3 characters)..."
+msgstr "Search tickets, projects (min. 3 characters)..."
+
+msgid "Search by ID (e.g. #123), exact phrases (e.g. \"web server\") or individual words."
+msgstr "Search by ID (e.g. #123), exact phrases (e.g. \"web server\") or individual words."
+
+msgid "Searching…"
+msgstr "Searching…"

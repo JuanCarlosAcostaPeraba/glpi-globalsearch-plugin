@@ -1,6 +1,6 @@
 # Global Search Enhancer
 
-[![Version](https://img.shields.io/badge/Version-2.1.0-green.svg)](https://github.com/JuanCarlosAcostaPeraba/glpi-globalsearch-plugin/releases)
+[![Version](https://img.shields.io/badge/Version-2.2.0-green.svg)](https://github.com/JuanCarlosAcostaPeraba/glpi-globalsearch-plugin/releases)
 [![GLPI Marketplace](https://img.shields.io/badge/GLPI_Marketplace-Available-orange.svg)](https://plugins.glpi-project.org/#/plugin/globalsearch)
 [![GLPI](https://img.shields.io/badge/GLPI-11.0.x-blue.svg)](https://glpi-project.org)
 [![License: GPLv3+](https://img.shields.io/badge/License-GPLv3+-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
@@ -95,8 +95,10 @@ globalsearch/
 ├── templates/
 │   └── search_results.html.twig # Results template
 ├── locales/
-│   ├── en_GB.php              # English
-│   └── es_ES.php              # Spanish
+│   ├── en_GB.po               # English (UK) source
+│   ├── en_US.po               # English (US) source
+│   ├── es_ES.po               # Spanish source
+│   └── es_ES.mo               # Compiled Spanish (generated)
 ├── assets/
 │   └── logo.png               # Plugin logo
 └── README.md
@@ -113,6 +115,6 @@ globalsearch/
 
 Fully compatible with GLPI plugin licensing requirements.
 
-## 👤 Author
+## 👥 Authors
 
-Developed by **Juan Carlos Acosta Perabá** for **HUC – Hospital Universitario de Canarias**.
+Developed by **Juan Carlos Acosta Perabá** and **contributors** for **HUC – Hospital Universitario de Canarias**.

@@ -17,9 +17,9 @@ if (isset($_POST['update_config'])) {
     }
 
     if (PluginGlobalsearchConfig::updateConfig($data)) {
-        Session::addMessageAfterRedirect(__('Configuration saved successfully'), false, INFO);
+        Session::addMessageAfterRedirect(__('Configuration saved successfully', 'globalsearch'), false, INFO);
     } else {
-        Session::addMessageAfterRedirect(__('Error saving configuration'), false, ERROR);
+        Session::addMessageAfterRedirect(__('Error saving configuration', 'globalsearch'), false, ERROR);
     }
 
     Html::back();

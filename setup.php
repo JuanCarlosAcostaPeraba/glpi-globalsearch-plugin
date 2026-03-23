@@ -6,7 +6,7 @@ if (!defined('GLPI_ROOT')) {
     die('Direct access not allowed');
 }
 
-define('GLOBALSEARCH_VERSION', '2.1.0');
+define('GLOBALSEARCH_VERSION', '2.2.0');
 define('GLOBALSEARCH_MIN_GLPI', '11.0.0');
 define('GLOBALSEARCH_MAX_GLPI', '11.0.99');
 
@@ -46,9 +46,10 @@ function plugin_version_globalsearch()
     return [
         'name' => 'Global Search Enhancer',
         'version' => GLOBALSEARCH_VERSION,
-        'author' => 'Juan Carlos Acosta Perabá',
+        'author' => 'Juan Carlos Acosta Perabá and contributors',
         'license' => 'GPLv3+',
         'homepage' => 'https://github.com/JuanCarlosAcostaPeraba/glpi-globalsearch-plugin',
+        'id' => 'globalsearch',
         'requirements' => [
             'glpi' => [
                 'min' => '11.0.0',
@@ -57,6 +58,103 @@ function plugin_version_globalsearch()
         ],
     ];
 }
+
+/**
+ * Instalación del plugin
+ */
+function plugin_globalsearch_install()
+{
+    global $DB;
+
+    // DEBUG: Log hook execution
+    $log_file = dirname(__FILE__) . '/install_debug.log';
+    file_put_contents($log_file, "plugin_globalsearch_install started at " . date('Y-m-d H:i:s') . "\n", FILE_APPEND);
+
+    // Compilar archivos .po a .mo si msgfmt está disponible (primero, como en validationlock)
+    $locales_dir = dirname(__FILE__) . '/locales';
+    if (is_dir($locales_dir)) {
+        $po_files = glob($locales_dir . '/*.po');
+        if ($po_files) {
+            foreach ($po_files as $po_file) {
+                $mo_file = str_replace('.po', '.mo', $po_file);
+                $cmd = "msgfmt -f -o " . escapeshellarg($mo_file) . " " . escapeshellarg($po_file);
+                exec($cmd . " 2>&1", $output, $return_var);
+                file_put_contents($log_file, "Compiling $po_file: $cmd\nResult (code $return_var): " . implode("\n", $output) . "\n", FILE_APPEND);
+            }
+        }
+    }
+
+    // Crear tabla de configuración
+    if (!$DB->tableExists('glpi_plugin_globalsearch_configs')) {
+        $query = "CREATE TABLE `glpi_plugin_globalsearch_configs` (
+            `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `search_type` VARCHAR(50) NOT NULL COMMENT 'Tipo de búsqueda: Ticket, Project, Document, etc.',
+            `is_enabled` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = activo, 0 = desactivado',
+            `date_mod` TIMESTAMP NULL DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `search_type` (`search_type`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
+
+        $DB->doQuery($query);
+
+        // Insertar valores por defecto (todos activos)
+        $default_types = [
+            'Ticket',
+            'Project',
+            'Document',
+            'Software',
+            'User',
+            'TicketTask',
+            'ProjectTask'
+        ];
+
+        foreach ($default_types as $type) {
+            $DB->insert('glpi_plugin_globalsearch_configs', [
+                'search_type' => $type,
+                'is_enabled'  => 1,
+                'date_mod'    => date('Y-m-d H:i:s')
+            ]);
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Desinstalación del plugin
+ */
+function plugin_globalsearch_uninstall()
+{
+    global $DB;
+    $DB->dropTable('glpi_plugin_globalsearch_configs');
+    return true;
+}
+
+/**
+ * Actualización del plugin
+ */
+function plugin_globalsearch_upgrade()
+{
+    // DEBUG: Log hook execution
+    $log_file = dirname(__FILE__) . '/install_debug.log';
+    file_put_contents($log_file, "plugin_globalsearch_upgrade started at " . date('Y-m-d H:i:s') . "\n", FILE_APPEND);
+
+    // Re-compilar archivos .po a .mo en cada actualización
+    $locales_dir = dirname(__FILE__) . '/locales';
+    if (is_dir($locales_dir)) {
+        $po_files = glob($locales_dir . '/*.po');
+        if ($po_files) {
+            foreach ($po_files as $po_file) {
+                $mo_file = str_replace('.po', '.mo', $po_file);
+                $cmd = "msgfmt -f -o " . escapeshellarg($mo_file) . " " . escapeshellarg($po_file);
+                exec($cmd . " 2>&1", $output, $return_var);
+                file_put_contents($log_file, "Compiling $po_file: $cmd\nResult (code $return_var): " . implode("\n", $output) . "\n", FILE_APPEND);
+            }
+        }
+    }
+    return true;
+}
+
 
 /**
  * Requisitos mínimos

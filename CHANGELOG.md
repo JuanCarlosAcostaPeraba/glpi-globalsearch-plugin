@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-03-23
+
+### Fixed
+- **Translations (i18n)**: Modernized translation system by switching to gettext (`.po`/`.mo`) files.
+- **Translations (i18n)**: Correctly registered plugin ID in PHP and Twig to ensure localizations are picked up.
+- **Translations (i18n)**: Added automatic locale compilation hook during plugin installation.
+
 ## [2.1.0] - 2024-12-XX
 
 ### Security
