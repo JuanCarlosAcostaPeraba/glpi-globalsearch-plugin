@@ -8,9 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.2.0] - 2026-03-23
 
 ### Fixed
-- **Translations (i18n)**: Modernized translation system by switching to gettext (`.po`/`.mo`) files.
+- **Translations (i18n)**: Modernized translation system by switching to gettext (`.po`/`.mo`) files with legacy `.php` fallback for maximum compatibility.
 - **Translations (i18n)**: Correctly registered plugin ID in PHP and Twig to ensure localizations are picked up.
-- **Translations (i18n)**: Added automatic locale compilation hook during plugin installation.
+- **Translations (i18n)**: Added automatic locale compilation hook during plugin installation/update.
+- **Architecture**: Resolved `Cannot redeclare function` error by consolidating installation logic from `install/install.php` into `setup.php`.
+- **Security**: Fixed `AccessDeniedHttpException` (CSRF) issues during uninstallation by simplifying the hook structure.
+- **Database**: Fixed `Executing direct queries is not allowed!` error in GLPI 10+ by using modern abstraction methods like `$DB->dropTable()`.
+
+### Changed
+- **Metadata**: Generalized contributor attribution to "Juan Carlos Acosta Perabá and contributors" in `setup.php`, `plugin.xml`, and `README.md`.
 
 ## [2.1.0] - 2024-12-XX
 

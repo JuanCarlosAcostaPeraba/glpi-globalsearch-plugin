@@ -66,11 +66,7 @@ function plugin_globalsearch_install()
 {
     global $DB;
 
-    // DEBUG: Log hook execution
-    $log_file = dirname(__FILE__) . '/install_debug.log';
-    file_put_contents($log_file, "plugin_globalsearch_install started at " . date('Y-m-d H:i:s') . "\n", FILE_APPEND);
-
-    // Compilar archivos .po a .mo si msgfmt está disponible (primero, como en validationlock)
+    // Compilar archivos .po a .mo si msgfmt está disponible
     $locales_dir = dirname(__FILE__) . '/locales';
     if (is_dir($locales_dir)) {
         $po_files = glob($locales_dir . '/*.po');
@@ -78,8 +74,7 @@ function plugin_globalsearch_install()
             foreach ($po_files as $po_file) {
                 $mo_file = str_replace('.po', '.mo', $po_file);
                 $cmd = "msgfmt -f -o " . escapeshellarg($mo_file) . " " . escapeshellarg($po_file);
-                exec($cmd . " 2>&1", $output, $return_var);
-                file_put_contents($log_file, "Compiling $po_file: $cmd\nResult (code $return_var): " . implode("\n", $output) . "\n", FILE_APPEND);
+                @exec($cmd);
             }
         }
     }
@@ -135,10 +130,6 @@ function plugin_globalsearch_uninstall()
  */
 function plugin_globalsearch_upgrade()
 {
-    // DEBUG: Log hook execution
-    $log_file = dirname(__FILE__) . '/install_debug.log';
-    file_put_contents($log_file, "plugin_globalsearch_upgrade started at " . date('Y-m-d H:i:s') . "\n", FILE_APPEND);
-
     // Re-compilar archivos .po a .mo en cada actualización
     $locales_dir = dirname(__FILE__) . '/locales';
     if (is_dir($locales_dir)) {
@@ -147,8 +138,7 @@ function plugin_globalsearch_upgrade()
             foreach ($po_files as $po_file) {
                 $mo_file = str_replace('.po', '.mo', $po_file);
                 $cmd = "msgfmt -f -o " . escapeshellarg($mo_file) . " " . escapeshellarg($po_file);
-                exec($cmd . " 2>&1", $output, $return_var);
-                file_put_contents($log_file, "Compiling $po_file: $cmd\nResult (code $return_var): " . implode("\n", $output) . "\n", FILE_APPEND);
+                @exec($cmd);
             }
         }
     }
