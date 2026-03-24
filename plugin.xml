@@ -59,7 +59,8 @@ Desarrollado para uso real en el **Hospital Universitario de Canarias (HUC)**.
 	<readme>https://raw.githubusercontent.com/JuanCarlosAcostaPeraba/glpi-globalsearch-plugin/main/README.md</readme>
 
 	<authors>
-		<author>Juan Carlos Acosta Perabá and contributors</author>
+		<author>Juan Carlos Acosta Perabá</author>
+		<author>Contributors</author>
 	</authors>
 
 	<versions>
