@@ -13,8 +13,9 @@ A lightweight GLPI plugin that enhances the **Global Search** by replacing the d
 * 🔹 Multi-word "Google-style" search functionality
 * 🔹 Search in closed tickets and resolved projects
 * 🔹 Configurable search types via admin panel
-* 🔹 Search across 7 different item types:
+* 🔹 Search across 8 different item types:
   * Tickets (with status and assigned technician)
+  * Changes (with status and assigned technician)
   * Projects (including resolved)
   * Documents
   * Software
@@ -57,7 +58,7 @@ Access the plugin settings via **GLPI → Configuration → Plugins → Global S
 
 Available options:
 
-* **Enable/disable search** for each type (Tickets, Projects, Documents, Software, Users, Ticket Tasks, Project Tasks)
+* **Enable/disable search** for each type (Tickets, Changes, Projects, Documents, Software, Users, Ticket Tasks, Project Tasks)
 
 ## 🔍 How it works
 
