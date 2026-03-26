@@ -21,7 +21,7 @@ Key features:
 
 - **Multi-word "Google-style" search** - find items containing ALL specified words
 - **Search in closed/resolved items** - includes closed tickets and resolved projects
-- **7 searchable item types**: Tickets, Projects, Documents, Software, Users, Ticket Tasks, Project Tasks
+- **8 searchable item types**: Tickets, Changes, Projects, Documents, Software, Users, Ticket Tasks, Project Tasks
 - **Configurable filters** - enable/disable search per item type via admin panel
 - **Smart ID search** - numeric queries search directly by ID
 - **Entity-aware** - respects GLPI's entity permissions
@@ -39,7 +39,7 @@ Características principales:
 
 - **Búsqueda multi-palabra "estilo Google"** - encuentra elementos que contengan TODAS las palabras
 - **Búsqueda en elementos cerrados/resueltos** - incluye tickets cerrados y proyectos resueltos
-- **7 tipos de elementos buscables**: Tickets, Proyectos, Documentos, Software, Usuarios, Tareas de Tickets, Tareas de Proyectos
+- **8 tipos de elementos buscables**: Tickets, Cambios, Proyectos, Documentos, Software, Usuarios, Tareas de Tickets, Tareas de Proyectos
 - **Filtros configurables** - activa/desactiva búsqueda por tipo desde el panel de administración
 - **Búsqueda inteligente por ID** - las consultas numéricas buscan directamente por ID
 - **Respeta entidades** - cumple con los permisos de entidades de GLPI
@@ -82,6 +82,7 @@ Desarrollado para uso real en el **Hospital Universitario de Canarias (HUC)**.
 	</versions>
 
 	<langs>
+		<lang>en_US</lang>
 		<lang>en_GB</lang>
 		<lang>es_ES</lang>
 	</langs>

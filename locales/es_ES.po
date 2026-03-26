@@ -52,6 +52,11 @@ msgid_plural "Tickets"
 msgstr[0] "Ticket"
 msgstr[1] "Tickets"
 
+msgid "Change"
+msgid_plural "Changes"
+msgstr[0] "Cambio"
+msgstr[1] "Cambios"
+
 msgid "Project"
 msgid_plural "Projects"
 msgstr[0] "Proyecto"
@@ -86,6 +91,9 @@ msgstr "Asignado a"
 
 msgid "Technician"
 msgstr "Técnico"
+
+msgid "Requester"
+msgstr "Peticionario"
 
 msgid "Entity"
 msgstr "Entidad"

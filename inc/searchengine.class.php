@@ -260,6 +260,10 @@ class PluginGlobalsearchSearchEngine
             $results['Ticket'] = $this->searchTickets();
         }
 
+        if (PluginGlobalsearchConfig::isEnabled('Change')) {
+            $results['Change'] = $this->searchChanges();
+        }
+
         if (PluginGlobalsearchConfig::isEnabled('Project')) {
             $results['Project'] = $this->searchProjects();
         }
@@ -473,6 +477,158 @@ class PluginGlobalsearchSearchEngine
         }
 
         return array_values($tickets);
+    }
+
+    /**
+     * Search in changes (including closed/resolved)
+     * Returns all results without limit, using Bulk Load strategy for technicians and requesters.
+     * Applies permission restrictions according to user rights.
+     *
+     * @return array
+     */
+    public function searchChanges()
+    {
+        global $DB;
+
+        if (!Change::canView()) {
+            return [];
+        }
+
+        $entity_criteria = $this->getEntityRestrictCriteria('Change', 'glpi_changes');
+
+        $search_fields = ['glpi_changes.name', 'glpi_changes.content'];
+
+        if ($this->id_only) {
+            $where = ['glpi_changes.id' => $this->raw_query];
+        } else {
+            $main_criteria = [];
+            if (is_numeric($this->raw_query)) {
+                $id_criteria = ['glpi_changes.id' => $this->raw_query];
+                $content_criteria = $this->getMultiWordCriteria($search_fields);
+                $main_criteria = !empty($content_criteria) ? ['OR' => [$id_criteria, $content_criteria]] : $id_criteria;
+            } elseif (mb_strlen($this->raw_query) >= 3) {
+                $main_criteria = $this->getMultiWordCriteria($search_fields);
+            } else {
+                return [];
+            }
+
+            $where = $main_criteria;
+        }
+
+        $common_where = [
+            'AND' => array_filter([
+                $where,
+                $entity_criteria,
+                ['glpi_changes.is_deleted' => 0]
+            ])
+        ];
+
+        $iterator = $DB->request([
+            'SELECT' => [
+                'glpi_changes.id',
+                'glpi_changes.name',
+                'glpi_changes.status',
+                'glpi_changes.entities_id',
+                'glpi_changes.date',
+                'glpi_changes.closedate',
+                'glpi_changes.date_mod'
+            ],
+            'FROM' => 'glpi_changes',
+            'WHERE' => $common_where,
+            'ORDER' => 'glpi_changes.date_mod DESC'
+        ]);
+
+        $changes = [];
+        $change_ids = [];
+        $change_obj = new Change();
+
+        foreach ($iterator as $row) {
+            if ($change_obj->can($row['id'], READ)) {
+                $row['status_name'] = Change::getStatus($row['status']);
+                $row['tech_name'] = __('Not assigned');
+                $row['requester_name'] = __('Not assigned');
+                $changes[$row['id']] = $row;
+                $change_ids[] = $row['id'];
+            }
+        }
+
+        // Bulk load technicians
+        if (!empty($change_ids)) {
+            $tech_iter = $DB->request([
+                'SELECT' => [
+                    'glpi_changes_users.changes_id',
+                    'glpi_users.firstname',
+                    'glpi_users.realname',
+                    'glpi_users.name AS uname'
+                ],
+                'FROM' => 'glpi_changes_users',
+                'INNER JOIN' => [
+                    'glpi_users' => [
+                        'ON' => ['glpi_changes_users' => 'users_id', 'glpi_users' => 'id']
+                    ]
+                ],
+                'WHERE' => [
+                    'glpi_changes_users.changes_id' => $change_ids,
+                    'glpi_changes_users.type' => 2 // Assigned
+                ]
+            ]);
+
+            $techs_by_change = [];
+            foreach ($tech_iter as $tech_row) {
+                $cid = $tech_row['changes_id'];
+                $fullname = trim($tech_row['firstname'] . ' ' . $tech_row['realname']);
+                if (empty($fullname)) {
+                    $fullname = $tech_row['uname'];
+                }
+                $techs_by_change[$cid][] = $fullname;
+            }
+
+            foreach ($techs_by_change as $cid => $names) {
+                if (isset($changes[$cid])) {
+                    $changes[$cid]['tech_name'] = implode(', ', $names);
+                }
+            }
+        }
+
+        // Bulk load requesters
+        if (!empty($change_ids)) {
+            $requester_iter = $DB->request([
+                'SELECT' => [
+                    'glpi_changes_users.changes_id',
+                    'glpi_users.firstname',
+                    'glpi_users.realname',
+                    'glpi_users.name AS uname'
+                ],
+                'FROM' => 'glpi_changes_users',
+                'INNER JOIN' => [
+                    'glpi_users' => [
+                        'ON' => ['glpi_changes_users' => 'users_id', 'glpi_users' => 'id']
+                    ]
+                ],
+                'WHERE' => [
+                    'glpi_changes_users.changes_id' => $change_ids,
+                    'glpi_changes_users.type' => 1 // Requester
+                ]
+            ]);
+
+            $requesters_by_change = [];
+            foreach ($requester_iter as $req_row) {
+                $cid = $req_row['changes_id'];
+                $fullname = trim($req_row['firstname'] . ' ' . $req_row['realname']);
+                if (empty($fullname)) {
+                    $fullname = $req_row['uname'];
+                }
+                $requesters_by_change[$cid][] = $fullname;
+            }
+
+            foreach ($requesters_by_change as $cid => $names) {
+                if (isset($changes[$cid])) {
+                    $changes[$cid]['requester_name'] = implode(', ', $names);
+                }
+            }
+        }
+
+        return array_values($changes);
     }
 
     /**
