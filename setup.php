@@ -95,6 +95,7 @@ function plugin_globalsearch_install()
         // Insert default values (all active)
         $default_types = [
             'Ticket',
+            'Change',
             'Project',
             'Document',
             'Software',
@@ -104,6 +105,34 @@ function plugin_globalsearch_install()
         ];
 
         foreach ($default_types as $type) {
+            $DB->insert('glpi_plugin_globalsearch_configs', [
+                'search_type' => $type,
+                'is_enabled'  => 1,
+                'date_mod'    => date('Y-m-d H:i:s')
+            ]);
+        }
+    }
+
+    // Migration: add missing search types for existing installations
+    $expected_types = [
+        'Ticket',
+        'Change',
+        'Project',
+        'Document',
+        'Software',
+        'User',
+        'TicketTask',
+        'ProjectTask'
+    ];
+
+    foreach ($expected_types as $type) {
+        $iterator = $DB->request([
+            'FROM'  => 'glpi_plugin_globalsearch_configs',
+            'WHERE' => ['search_type' => $type],
+            'LIMIT' => 1
+        ]);
+
+        if (count($iterator) === 0) {
             $DB->insert('glpi_plugin_globalsearch_configs', [
                 'search_type' => $type,
                 'is_enabled'  => 1,

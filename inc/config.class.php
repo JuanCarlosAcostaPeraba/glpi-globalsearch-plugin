@@ -90,6 +90,7 @@ class PluginGlobalsearchConfig extends CommonDBTM
     {
         return [
             'Ticket'      => _n('Ticket', 'Tickets', 2, 'globalsearch'),
+            'Change'      => _n('Change', 'Changes', 2, 'globalsearch'),
             'Project'     => _n('Project', 'Projects', 2, 'globalsearch'),
             'Document'    => _n('Document', 'Documents', 2, 'globalsearch'),
             'Software'    => _n('Software', 'Software', 2, 'globalsearch'),
