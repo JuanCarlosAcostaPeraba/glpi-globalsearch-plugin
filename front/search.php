@@ -50,8 +50,8 @@ try {
         ]
     );
 } catch (Exception $e) {
-    echo "<pre>Template error: " . $e->getMessage() . "</pre>";
     error_log("Template error: " . $e->getMessage());
+    echo "<p class='alert alert-danger'>" . __('An error occurred') . "</p>";
 }
 
 Html::footer();

@@ -14,7 +14,7 @@
     function setCookie(name, value, days) {
         const expires = new Date();
         expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
-        document.cookie = name + '=' + encodeURIComponent(value) + ';expires=' + expires.toUTCString() + ';path=/';
+        document.cookie = name + '=' + encodeURIComponent(value) + ';expires=' + expires.toUTCString() + ';path=/;SameSite=Lax';
     }
 
     function getCookie(name) {
@@ -890,24 +890,21 @@
                 function highlightTextNodes(node) {
                     if (node.nodeType === Node.TEXT_NODE) {
                         // It is a text node, apply highlighting
-                        let text = node.textContent;
-                        let highlightedText = text;
+                        const regex = new RegExp(`(${terms.map(escapeRegex).join('|')})`, 'gi');
+                        const parts = node.textContent.split(regex);
 
-                        terms.forEach(function (term) {
-                            const regex = new RegExp(`(${escapeRegex(term)})`, 'gi');
-                            highlightedText = highlightedText.replace(regex, '<mark>$1</mark>');
-                        });
-
-                        // If there are changes, replace the text node
-                        if (highlightedText !== text) {
-                            const tempSpan = document.createElement('span');
-                            tempSpan.innerHTML = highlightedText;
-
-                            // Replace the text node with the span nodes
-                            while (tempSpan.firstChild) {
-                                node.parentNode.insertBefore(tempSpan.firstChild, node);
-                            }
-                            node.parentNode.removeChild(node);
+                        if (parts.length > 1) {
+                            const frag = document.createDocumentFragment();
+                            parts.forEach(function (part, i) {
+                                if (i % 2 === 1) {
+                                    const mark = document.createElement('mark');
+                                    mark.textContent = part;
+                                    frag.appendChild(mark);
+                                } else if (part) {
+                                    frag.appendChild(document.createTextNode(part));
+                                }
+                            });
+                            node.parentNode.replaceChild(frag, node);
                         }
                     } else if (node.nodeType === Node.ELEMENT_NODE) {
                         // It is an element, process its children recursively
