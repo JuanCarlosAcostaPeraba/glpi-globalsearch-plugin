@@ -336,7 +336,12 @@ class PluginGlobalsearchSearchEngine
                         new QuerySubQuery([
                             'SELECT' => 'tickets_id',
                             'FROM' => 'glpi_tickettasks',
-                            'WHERE' => $task_subquery_criteria
+                            'WHERE' => [
+                                'AND' => [
+                                    $task_subquery_criteria,
+                                    ['OR' => ['is_private' => 0, 'users_id' => Session::getLoginUserID()]]
+                                ]
+                            ]
                         ])
                     ]
                 ];
@@ -774,7 +779,7 @@ class PluginGlobalsearchSearchEngine
         // Enhanced search: match documents if any of their notes match the criteria
         // Notes are stored in glpi_notepads with polymorphic association
         $notepad_subquery_criteria = $this->getMultiWordCriteria(['content']);
-        if (!empty($notepad_subquery_criteria) && !$this->id_only) {
+        if (!empty($notepad_subquery_criteria) && !$this->id_only && Session::haveRight(Document::$rightname, READNOTE)) {
             $notepad_match = [
                 'glpi_documents.id' => [
                     'IN',
