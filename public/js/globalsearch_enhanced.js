@@ -8,6 +8,8 @@
     const ITEMS_PER_PAGE = 20;
     const STORAGE_PREFIX = 'globalsearch_columns_';
 
+    const L = window.GLOBALSEARCH_LANG || {};
+
     /**
      * Cookie utilities
      */
@@ -207,10 +209,10 @@
                 <small class="text-muted search-pagination-info"></small>
                 <div>
                     <button class="btn btn-sm btn-outline-primary search-pagination-prev" disabled>
-                        <i class="fas fa-chevron-left"></i> Previous
+                        <i class="fas fa-chevron-left"></i> ${L.previous || 'Previous'}
                     </button>
                     <button class="btn btn-sm btn-outline-primary ms-1 search-pagination-next">
-                        Next <i class="fas fa-chevron-right"></i>
+                        ${L.next || 'Next'} <i class="fas fa-chevron-right"></i>
                     </button>
                 </div>
             `;
@@ -248,7 +250,10 @@
             // Update information
             const startNum = currentTotalRows > 0 ? start + 1 : 0;
             const endNum = end;
-            paginationInfo.textContent = `Showing ${startNum} - ${endNum} of ${currentTotalRows}`;
+            paginationInfo.textContent = (L.showing || 'Showing {start} - {end} of {total}')
+                .replace('{start}', startNum)
+                .replace('{end}', endNum)
+                .replace('{total}', currentTotalRows);
 
             // Update buttons
             prevBtn.disabled = (page === 0);
@@ -301,7 +306,7 @@
             return false;
         }
 
-        const dateKeywords = ['date', 'fecha', 'update', 'actualización', 'created', 'creado', 'modified', 'modificado', 'time', 'tiempo'];
+        const dateKeywords = ['date', 'fecha', 'datum', 'update', 'actualización', 'bijgewerkt', 'created', 'creado', 'aangemaakt', 'modified', 'modificado', 'gewijzigd', 'wijziging', 'time', 'tiempo', 'tijd'];
 
         // Check for date keywords in the header
         const hasDateKeyword = dateKeywords.some(function (keyword) {
@@ -448,7 +453,7 @@
                 const select = document.createElement('select');
                 select.className = 'form-control form-control-sm filter-input';
                 select.setAttribute('data-column-index', index);
-                select.innerHTML = '<option value="">All</option>';
+                select.innerHTML = '<option value="">' + (L.all || 'All') + '</option>';
                 // Get unique status values from the table
                 const statusValues = getUniqueColumnValues(table, index);
                 statusValues.forEach(function (val) {
@@ -467,7 +472,7 @@
                 // "From" input
                 const fromLabel = document.createElement('label');
                 fromLabel.className = 'filter-date-label';
-                fromLabel.textContent = 'From:';
+                fromLabel.textContent = L.from || 'From:';
                 fromLabel.setAttribute('for', 'filter-date-from-' + index);
 
                 const fromInput = document.createElement('input');
@@ -480,7 +485,7 @@
                 // "To" input
                 const toLabel = document.createElement('label');
                 toLabel.className = 'filter-date-label';
-                toLabel.textContent = 'To:';
+                toLabel.textContent = L.to || 'To:';
                 toLabel.setAttribute('for', 'filter-date-to-' + index);
 
                 const toInput = document.createElement('input');
@@ -501,7 +506,7 @@
                 input.type = 'text';
                 input.className = 'form-control form-control-sm filter-input';
                 input.setAttribute('data-column-index', index);
-                input.placeholder = 'Filter...';
+                input.placeholder = L.filter_placeholder || 'Filter...';
                 filterCell.appendChild(input);
             }
 
@@ -517,13 +522,13 @@
         const applyButton = document.createElement('button');
         applyButton.type = 'button';
         applyButton.className = 'btn btn-sm btn-primary filter-apply-btn';
-        applyButton.innerHTML = '<i class="fas fa-filter"></i> Apply Filters';
+        applyButton.innerHTML = '<i class="fas fa-filter"></i> ' + (L.apply_filters || 'Apply filters');
         applyButton.setAttribute('data-table-id', table.getAttribute('id'));
 
         const clearButton = document.createElement('button');
         clearButton.type = 'button';
         clearButton.className = 'btn btn-sm btn-outline-secondary filter-clear-btn ms-2';
-        clearButton.innerHTML = '<i class="fas fa-times"></i> Clear';
+        clearButton.innerHTML = '<i class="fas fa-times"></i> ' + (L.clear || 'Clear');
         clearButton.setAttribute('data-table-id', table.getAttribute('id'));
 
         buttonCell.appendChild(applyButton);
@@ -970,7 +975,7 @@
 
                     columnToggleBtn = document.createElement('button');
                     columnToggleBtn.className = 'btn btn-sm btn-outline-secondary column-toggle-btn';
-                    columnToggleBtn.innerHTML = '<i class="fas fa-columns"></i> Columns';
+                    columnToggleBtn.innerHTML = '<i class="fas fa-columns"></i> ' + (L.columns || 'Columns');
                     columnToggleBtn.setAttribute('data-bs-toggle', 'dropdown');
                     columnToggleBtn.setAttribute('aria-expanded', 'false');
 
