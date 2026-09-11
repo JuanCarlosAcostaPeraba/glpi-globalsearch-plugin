@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-09-10
+
+### Added
+- Dutch (nl_NL) translation, with compiled `.mo` files for all locales.
+
+### Fixed
+- Results-page labels (pagination, filters, columns) are now translatable.
+- Date-range filter recognises Dutch column headers.
+- Private ticket tasks and document notes are only shown to users allowed to see them.
+- Error details are no longer disclosed to the browser.
+- Plugin no longer includes legacy `inc/includes.php`.
+
+### Security
+- Search highlighting no longer uses `innerHTML` (XSS).
+
 ## [2.2.0] - 2026-03-23
 
 ### Fixed

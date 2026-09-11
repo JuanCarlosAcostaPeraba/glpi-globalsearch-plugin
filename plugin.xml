@@ -65,6 +65,11 @@ Desarrollado para uso real en el **Hospital Universitario de Canarias (HUC)**.
 
 	<versions>
 		<version>
+			<num>2.3.0</num>
+			<compatibility>~11.0.0</compatibility>
+			<download_url>https://github.com/JuanCarlosAcostaPeraba/glpi-globalsearch-plugin/releases/download/v2.3.0/globalsearch-2.3.0.zip</download_url>
+		</version>
+		<version>
 			<num>2.2.0</num>
 			<compatibility>~11.0.0</compatibility>
 			<download_url>https://github.com/JuanCarlosAcostaPeraba/glpi-globalsearch-plugin/releases/download/v2.2.0/globalsearch-2.2.0.zip</download_url>
@@ -85,6 +90,7 @@ Desarrollado para uso real en el **Hospital Universitario de Canarias (HUC)**.
 		<lang>en_US</lang>
 		<lang>en_GB</lang>
 		<lang>es_ES</lang>
+		<lang>nl_NL</lang>
 	</langs>
 
 	<license>GPL v3+</license>

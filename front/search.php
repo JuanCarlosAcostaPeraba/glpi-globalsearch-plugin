@@ -10,7 +10,6 @@ use Glpi\Application\View\TemplateRenderer;
 
 global $CFG_GLPI;
 
-include('../../../inc/includes.php');
 
 Session::checkCentralAccess();
 Html::header(__('Search'), $_SERVER['PHP_SELF']);
@@ -26,7 +25,7 @@ $query   = isset($_GET['globalsearch']) ? trim($_GET['globalsearch']) : '';
 $results = [];
 
 // Load plugin search engine
-require_once GLPI_ROOT . '/plugins/globalsearch/inc/searchengine.class.php';
+require_once __DIR__ . '/../inc/searchengine.class.php';
 
 if ($query !== '') {
     $engine  = new PluginGlobalsearchSearchEngine($query);
@@ -50,8 +49,8 @@ try {
         ]
     );
 } catch (Exception $e) {
-    echo "<pre>Template error: " . $e->getMessage() . "</pre>";
     error_log("Template error: " . $e->getMessage());
+    echo "<p class='alert alert-danger'>" . __('An error occurred') . "</p>";
 }
 
 Html::footer();

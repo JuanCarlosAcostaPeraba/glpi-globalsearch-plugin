@@ -9,6 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Poedit 3.4.2\n"
 
 msgid "Global Search Enhancer"
@@ -169,3 +170,30 @@ msgstr "Busca por ID (ej: #123), frases exactas (ej: \"servidor web\") o palabra
 
 msgid "Searching…"
 msgstr "Buscando…"
+
+msgid "Previous"
+msgstr "Anterior"
+
+msgid "Next"
+msgstr "Siguiente"
+
+msgid "Showing {start} - {end} of {total}"
+msgstr "Mostrando {start} - {end} de {total}"
+
+msgid "All"
+msgstr "Todos"
+
+msgid "From:"
+msgstr "Desde:"
+
+msgid "To:"
+msgstr "Hasta:"
+
+msgid "Filter..."
+msgstr "Filtrar..."
+
+msgid "Apply filters"
+msgstr "Aplicar filtros"
+
+msgid "Columns"
+msgstr "Columnas"

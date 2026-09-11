@@ -5,7 +5,7 @@ msgstr ""
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: \n"
-"Language: en_GB\n"
+"Language: nl_NL\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -13,40 +13,40 @@ msgstr ""
 "X-Generator: Poedit 3.4.2\n"
 
 msgid "Global Search Enhancer"
-msgstr "Global Search Enhancer"
+msgstr "Globale Zoekverbeteraar"
 
 msgid "Global Search Configuration"
-msgstr "Global Search Configuration"
+msgstr "Globale zoekconfiguratie"
 
 msgid "Configuration saved successfully"
-msgstr "Configuration saved successfully"
+msgstr "Configuratie succesvol opgeslagen"
 
 msgid "Error saving configuration"
-msgstr "Error saving configuration"
+msgstr "Fout bij het opslaan van de configuratie"
 
 msgid "Search Types"
-msgstr "Search Types"
+msgstr "Zoektypen"
 
 msgid "Enable search in this type"
-msgstr "Enable search in this type"
+msgstr "Zoeken inschakelen voor dit type"
 
 msgid "Search Results"
-msgstr "Search Results"
+msgstr "Zoekresultaten"
 
 msgid "No results found"
-msgstr "No results found"
+msgstr "Geen resultaten gevonden"
 
 msgid "Loading..."
-msgstr "Loading..."
+msgstr "Laden..."
 
 msgid "Loading search results..."
-msgstr "Loading search results..."
+msgstr "Zoekresultaten laden..."
 
 msgid "Results for"
-msgstr "Results for"
+msgstr "Resultaten voor"
 
 msgid "Showing results"
-msgstr "Showing results"
+msgstr "Resultaten weergeven"
 
 msgid "Ticket"
 msgid_plural "Tickets"
@@ -55,18 +55,18 @@ msgstr[1] "Tickets"
 
 msgid "Change"
 msgid_plural "Changes"
-msgstr[0] "Change"
-msgstr[1] "Changes"
+msgstr[0] "Wijziging"
+msgstr[1] "Wijzigingen"
 
 msgid "Project"
 msgid_plural "Projects"
 msgstr[0] "Project"
-msgstr[1] "Projects"
+msgstr[1] "Projecten"
 
 msgid "Document"
 msgid_plural "Documents"
 msgstr[0] "Document"
-msgstr[1] "Documents"
+msgstr[1] "Documenten"
 
 msgid "Software"
 msgid_plural "Software"
@@ -75,125 +75,125 @@ msgstr[1] "Software"
 
 msgid "User"
 msgid_plural "Users"
-msgstr[0] "User"
-msgstr[1] "Users"
+msgstr[0] "Gebruiker"
+msgstr[1] "Gebruikers"
 
 msgid "Ticket tasks"
-msgstr "Ticket tasks"
+msgstr "Tickettaken"
 
 msgid "Project tasks"
-msgstr "Project tasks"
+msgstr "Projecttaken"
 
 msgid "Status"
 msgstr "Status"
 
 msgid "Assigned to"
-msgstr "Assigned to"
+msgstr "Toegewezen aan"
 
 msgid "Technician"
-msgstr "Technician"
+msgstr "Technicus"
 
 msgid "Requester"
-msgstr "Requester"
+msgstr "Aanvrager"
 
 msgid "Entity"
-msgstr "Entity"
+msgstr "Entiteit"
 
 msgid "Date"
-msgstr "Date"
+msgstr "Datum"
 
 msgid "Modified"
-msgstr "Modified"
+msgstr "Gewijzigd"
 
 msgid "Created"
-msgstr "Created"
+msgstr "Aangemaakt"
 
 msgid "Closed"
-msgstr "Closed"
+msgstr "Gesloten"
 
 msgid "Category"
-msgstr "Category"
+msgstr "Categorie"
 
 msgid "Manufacturer"
-msgstr "Manufacturer"
+msgstr "Fabrikant"
 
 msgid "Phone"
-msgstr "Phone"
+msgstr "Telefoon"
 
 msgid "Mobile"
-msgstr "Mobile"
+msgstr "Mobiel"
 
 msgid "Related Ticket"
-msgstr "Related Ticket"
+msgstr "Gerelateerd ticket"
 
 msgid "Related Project"
-msgstr "Related Project"
+msgstr "Gerelateerd project"
 
 msgid "Please enter at least 3 characters"
-msgstr "Please enter at least 3 characters"
+msgstr "Voer minimaal 3 tekens in"
 
 msgid "This search type is disabled in configuration"
-msgstr "This search type is disabled in configuration"
+msgstr "Dit zoektype is uitgeschakeld in de configuratie"
 
 msgid "You do not have permission to view this type of item"
-msgstr "You do not have permission to view this type of item"
+msgstr "U heeft geen toestemming om dit type item te bekijken"
 
 msgid "Search"
-msgstr "Search"
+msgstr "Zoeken"
 
 msgid "Clear"
-msgstr "Clear"
+msgstr "Wissen"
 
 msgid "Configure"
-msgstr "Configure"
+msgstr "Configureren"
 
 msgid "Save"
-msgstr "Save"
+msgstr "Opslaan"
 
 msgid "Cancel"
-msgstr "Cancel"
+msgstr "Annuleren"
 
 msgid "Advanced global search"
-msgstr "Advanced global search"
+msgstr "Geavanceerd globaal zoeken"
 
 msgid "Global search"
-msgstr "Global search"
+msgstr "Globaal zoeken"
 
 msgid "Close"
-msgstr "Close"
+msgstr "Sluiten"
 
 msgid "Search tickets, projects (min. 3 characters)..."
-msgstr "Search tickets, projects (min. 3 characters)..."
+msgstr "Zoek tickets, projecten (min. 3 tekens)..."
 
 msgid "Search by ID (e.g. #123), exact phrases (e.g. \"web server\") or individual words."
-msgstr "Search by ID (e.g. #123), exact phrases (e.g. \"web server\") or individual words."
+msgstr "Zoek op ID (bijv. #123), exacte zinnen (bijv. \"webserver\") of losse woorden."
 
 msgid "Searching…"
-msgstr "Searching…"
+msgstr "Bezig met zoeken…"
 
 msgid "Previous"
-msgstr "Previous"
+msgstr "Vorige"
 
 msgid "Next"
-msgstr "Next"
+msgstr "Volgende"
 
 msgid "Showing {start} - {end} of {total}"
-msgstr "Showing {start} - {end} of {total}"
+msgstr "{start} - {end} van {total} weergegeven"
 
 msgid "All"
-msgstr "All"
+msgstr "Alles"
 
 msgid "From:"
-msgstr "From:"
+msgstr "Vanaf:"
 
 msgid "To:"
-msgstr "To:"
+msgstr "Tot:"
 
 msgid "Filter..."
-msgstr "Filter..."
+msgstr "Filteren..."
 
 msgid "Apply filters"
-msgstr "Apply filters"
+msgstr "Filters toepassen"
 
 msgid "Columns"
-msgstr "Columns"
+msgstr "Kolommen"
