@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-09-11
+
+### Added
+- **Wildcard Search Support**: Direct support for wildcards (`*` and `?`) in search queries (e.g., `imp*laser`, `serv*`, `*switch*`, `pc-?01`), providing seamless compatibility for technicians accustomed to legacy systems (Track-It!).
+- **Regular Expressions**: Native support for regular expressions with delimiters (`/pattern/flags`), `regex:` prefix, and regex operators (`^`, `$`, `[...]`, `\d`).
+- **Safe Regex Translation**: Automatic compilation of glob wildcards to safe MySQL/MariaDB `REGEXP` patterns with PHP `@preg_match()` pre-validation to prevent SQL errors (e.g. dangling `*` quantifier).
+- **DOM-Aware Highlighting**: Updated frontend search term highlighting in `globalsearch_enhanced.js` to match wildcard and regex patterns accurately across table results.
+- **Search Modal Query Persistence**: Retains the active search query when reopening the search modal and autofocusses the input.
+
+### Fixed
+- **Literal Quotes Matching**: Fixed exact phrase search within double, single, and typographical/curly quotes (`“...”`, `«...»`, `‘...’`).
+- **Unbalanced Quotes Handling**: Gracefully handles dangling, trailing, or unclosed quotation marks without breaking multi-term search.
+- **HTML & Non-Breaking Spaces**: Search criteria and DOM highlighting now seamlessly handle non-breaking spaces (`&nbsp;` / `\u00A0`) common in GLPI rich text fields.
+- **Search Term Protection**: Minimum query length check in `hasSearchTerms()` now ignores wildcards and regex delimiters (`*?\/`) to prevent accidental full-table dumps.
+- **Localized UI Strings**: Updated placeholder and contextual help text across all supported languages (Spanish, English UK/US, Dutch) explaining ID, exact phrase, wildcard, and regex search syntax.
+
 ## [2.3.0] - 2026-09-10
 
 ### Added
