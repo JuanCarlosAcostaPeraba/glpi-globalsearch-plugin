@@ -1,0 +1,121 @@
+name: Create Release on Merge
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Publish Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect plugin version
+        id: version
+        run: |
+          VERSION=$(grep -E "define\s*\(\s*['\"]GLOBALSEARCH_VERSION['\"]\s*," setup.php | sed -E "s/.*['\"]([0-9]+\.[0-9]+\.[0-9]+)['\"].*/\1/")
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not detect GLOBALSEARCH_VERSION in setup.php"
+            exit 1
+          fi
+          echo "Detected version: $VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check if tag already exists
+        id: check_tag
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="v${VERSION}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists. Skipping release creation."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag $TAG does not exist. A new release will be created."
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build plugin package (ZIP)
+        if: steps.check_tag.outputs.exists == 'false'
+        id: package
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          PLUGIN_NAME="globalsearch"
+          ZIP_NAME="${PLUGIN_NAME}-${VERSION}.zip"
+          TEMP_DIR="build/${PLUGIN_NAME}"
+
+          rm -rf build "${ZIP_NAME}"
+          mkdir -p "${TEMP_DIR}"
+
+          # Copy root files
+          cp setup.php plugin.xml LICENSE README.md CHANGELOG.md "${TEMP_DIR}/"
+          [ -f hook.php ] && cp hook.php "${TEMP_DIR}/"
+
+          # Copy plugin directories
+          [ -d inc ] && cp -r inc "${TEMP_DIR}/"
+          [ -d front ] && cp -r front "${TEMP_DIR}/"
+          [ -d public ] && cp -r public "${TEMP_DIR}/"
+          [ -d templates ] && cp -r templates "${TEMP_DIR}/"
+          [ -d locales ] && cp -r locales "${TEMP_DIR}/"
+          [ -d assets ] && cp -r assets "${TEMP_DIR}/"
+
+          # Create zip with root directory globalsearch/
+          (cd build && zip -r "../${ZIP_NAME}" "${PLUGIN_NAME}")
+          rm -rf build
+
+          echo "zip_name=${ZIP_NAME}" >> "$GITHUB_OUTPUT"
+          echo "Package created: ${ZIP_NAME}"
+
+      - name: Prepare release notes
+        if: steps.check_tag.outputs.exists == 'false'
+        id: notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          # Extract release notes for this version from CHANGELOG.md
+          CHANGELOG_SECTION=$(awk -v ver="$VERSION" '$0 ~ "^## \\[" ver "\\]" {flag=1; next} /^## \\[/ {flag=0} flag' CHANGELOG.md | sed -e '1{/^$/d}' -e '${/^$/d}')
+
+          cat << 'EOF' > release_notes.md
+## ⚠️ Requisitos / Requirements
+- **GLPI 11.0.x** (requerido / required)
+- **PHP 8.1+** (requerido / required)
+
+EOF
+
+          if [ -n "$CHANGELOG_SECTION" ]; then
+            echo "$CHANGELOG_SECTION" >> release_notes.md
+          else
+            echo "Release notes for version ${VERSION}." >> release_notes.md
+          fi
+
+          cat << 'EOF' >> release_notes.md
+
+---
+## 📥 Instalación / Installation
+1. Descarga el archivo zip adjunto a esta release (`globalsearch-X.Y.Z.zip`).
+2. Descomprímelo en el directorio `glpi/plugins/` (la carpeta resultante debe llamarse `globalsearch`).
+3. En GLPI, ve a **Configuración > Plugins**, instala y activa el plugin.
+EOF
+
+      - name: Create GitHub Release
+        if: steps.check_tag.outputs.exists == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="v${VERSION}"
+          ZIP_NAME="${{ steps.package.outputs.zip_name }}"
+
+          gh release create "$TAG" "$ZIP_NAME" \
+            --title "$TAG" \
+            --notes-file release_notes.md \
+            --target main
