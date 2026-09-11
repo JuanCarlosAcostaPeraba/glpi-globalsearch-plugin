@@ -84,27 +84,23 @@ jobs:
           # Extract release notes for this version from CHANGELOG.md
           CHANGELOG_SECTION=$(awk -v ver="$VERSION" '$0 ~ "^## \\[" ver "\\]" {flag=1; next} /^## \\[/ {flag=0} flag' CHANGELOG.md | sed -e '1{/^$/d}' -e '${/^$/d}')
 
-          cat << 'EOF' > release_notes.md
-## ⚠️ Requisitos / Requirements
-- **GLPI 11.0.x** (requerido / required)
-- **PHP 8.1+** (requerido / required)
-
-EOF
-
-          if [ -n "$CHANGELOG_SECTION" ]; then
-            echo "$CHANGELOG_SECTION" >> release_notes.md
-          else
-            echo "Release notes for version ${VERSION}." >> release_notes.md
-          fi
-
-          cat << 'EOF' >> release_notes.md
-
----
-## 📥 Instalación / Installation
-1. Descarga el archivo zip adjunto a esta release (`globalsearch-X.Y.Z.zip`).
-2. Descomprímelo en el directorio `glpi/plugins/` (la carpeta resultante debe llamarse `globalsearch`).
-3. En GLPI, ve a **Configuración > Plugins**, instala y activa el plugin.
-EOF
+          {
+            echo "## ⚠️ Requisitos / Requirements"
+            echo "- **GLPI 11.0.x** (requerido / required)"
+            echo "- **PHP 8.1+** (requerido / required)"
+            echo ""
+            if [ -n "$CHANGELOG_SECTION" ]; then
+              echo "$CHANGELOG_SECTION"
+            else
+              echo "Release notes for version ${VERSION}."
+            fi
+            echo ""
+            echo "---"
+            echo "## 📥 Instalación / Installation"
+            echo "1. Descarga el archivo zip adjunto a esta release (\`globalsearch-X.Y.Z.zip\`)."
+            echo "2. Descomprímelo en el directorio \`glpi/plugins/\` (la carpeta resultante debe llamarse \`globalsearch\`)."
+            echo "3. En GLPI, ve a **Configuración > Plugins**, instala y activa el plugin."
+          } > release_notes.md
 
       - name: Create GitHub Release
         if: steps.check_tag.outputs.exists == 'false'
