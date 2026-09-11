@@ -82,7 +82,7 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           
           # Extract release notes for this version from CHANGELOG.md
-          CHANGELOG_SECTION=$(awk -v ver="$VERSION" '$0 ~ "^## \\[" ver "\\]" {flag=1; next} /^## \\[/ {flag=0} flag' CHANGELOG.md | sed -e '1{/^$/d}' -e '${/^$/d}')
+          CHANGELOG_SECTION=$(awk -v ver="$VERSION" 'index($0, "## [" ver "]") == 1 {flag=1; next} flag && index($0, "## [") == 1 {flag=0} flag' CHANGELOG.md | sed -e '1{/^$/d}' -e '${/^$/d}')
 
           {
             echo "## ⚠️ Requisitos / Requirements"
