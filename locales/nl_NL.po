@@ -165,8 +165,14 @@ msgstr "Sluiten"
 msgid "Search tickets, projects (min. 3 characters)..."
 msgstr "Zoek tickets, projecten (min. 3 tekens)..."
 
+msgid "Search tickets, projects (min. 2 characters)..."
+msgstr "Zoek tickets, projecten (min. 2 tekens)..."
+
 msgid "Search by ID (e.g. #123), exact phrases (e.g. \"web server\") or individual words."
 msgstr "Zoek op ID (bijv. #123), exacte zinnen (bijv. \"webserver\") of losse woorden."
+
+msgid "Search by ID (#123), phrases (\"web server\"), wildcards (imp*laser) or regex (/sw-[0-9]+/)."
+msgstr "Zoek op ID (#123), zinnen (\"webserver\"), jokertekens (imp*laser) of regex (/sw-[0-9]+/)."
 
 msgid "Searching…"
 msgstr "Bezig met zoeken…"

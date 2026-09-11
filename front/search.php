@@ -21,7 +21,7 @@ if (!$CFG_GLPI['allow_search_global']) {
     exit;
 }
 
-$query   = isset($_GET['globalsearch']) ? trim($_GET['globalsearch']) : '';
+$query   = isset($_GET['globalsearch']) ? stripslashes(trim($_GET['globalsearch'])) : '';
 $results = [];
 
 // Load plugin search engine

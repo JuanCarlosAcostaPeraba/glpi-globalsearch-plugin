@@ -10,7 +10,7 @@
 	<div class="row">
 		<div class="col-12">
 			<h2 class="mb-3">
-				{{ __('Search Results', 'globalsearch') }}: "{{ query }}"
+				{{ __('Search Results', 'globalsearch') }}: {{ (query starts with '"' and query ends with '"') ? query : ('"' ~ query ~ '"') }}
 			</h2>
 
 			{# Tickets #}

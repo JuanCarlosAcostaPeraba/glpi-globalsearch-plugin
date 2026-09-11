@@ -16,11 +16,11 @@ class PluginGlobalsearchSearchEngine
      */
     public function __construct($raw_query)
     {
-        $raw = trim($raw_query);
+        $raw = stripslashes(trim($raw_query));
 
         // Support for prefix "#123" => ID-only mode
         if ($raw !== '' && mb_substr($raw, 0, 1) === '#') {
-            $id = trim(mb_substr($raw, 1));
+            $id = trim(mb_substr($raw, 1), " \t\n\r\0\x0B\"'");
             if (is_numeric($id)) {
                 $this->id_only = true;
                 $this->raw_query = $id;
@@ -157,35 +157,225 @@ class PluginGlobalsearchSearchEngine
     }
 
     /**
-     * Generates "Google-style" search criteria.
-     * Splits the query into words and requires ALL words to appear
-     * in at least one of the provided fields.
+    /**
+     * Extracts search terms from raw query string.
+     * Supports literal phrases in double/single/typographical quotes,
+     * handles unbalanced/unclosed quotes, extra whitespace, etc.
+     *
+     * @param string $query
+     * @return array Array of distinct search terms/phrases
+     */
+    public static function extractTerms($query)
+    {
+        if ($query === null || trim($query) === '') {
+            return [];
+        }
+
+        $raw = stripslashes(trim($query));
+
+        // Support for prefix "#123" => extract ID without #
+        if ($raw !== '' && mb_substr($raw, 0, 1) === '#') {
+            $id = trim(mb_substr($raw, 1), " \t\n\r\0\x0B\"'");
+            if (is_numeric($id)) {
+                return [$id];
+            }
+        }
+
+        // Normalize unicode quotation marks:
+        // Double: “ (U+201C), ” (U+201D), „ (U+201E), « (U+00AB), » (U+00BB)
+        $raw = preg_replace('/[“”„«»]/u', '"', $raw);
+
+        // Single: ‘ (U+2018), ’ (U+2019), ‚ (U+201A)
+        $raw = preg_replace('/[‘’‚]/u', "'", $raw);
+
+        // Convert single-quoted phrases like 'servidor web' to double-quoted phrases
+        // (avoiding contractions inside words like l'imprimante)
+        $raw = preg_replace('/(?<!\p{L})\'([^\']+)\'(?!\p{L})/u', '"$1"', $raw);
+
+        // Handle unbalanced double quotes
+        $quoteCount = substr_count($raw, '"');
+        if ($quoteCount % 2 !== 0) {
+            $firstQuotePos = strpos($raw, '"');
+            $lastQuotePos = strrpos($raw, '"');
+            if ($firstQuotePos === $lastQuotePos) {
+                if ($firstQuotePos === 0 || preg_match('/\s$/u', mb_substr($raw, 0, $firstQuotePos))) {
+                    // Quote at start or after whitespace: close at end
+                    $raw .= '"';
+                } elseif ($lastQuotePos === strlen($raw) - 1) {
+                    // Quote at end without opening: strip it
+                    $raw = substr($raw, 0, -1);
+                } else {
+                    // Stray quote in middle
+                    $raw = substr_replace($raw, '', $lastQuotePos, 1);
+                }
+            } else {
+                $raw .= '"';
+            }
+        }
+
+        // Extract phrases in quotes, explicit /pattern/ regex, or individual words
+        preg_match_all('/"([^"]+)"|(?<=^|\s)\/([^\/]+)\/([a-z]*)(?=$|\s)|(\S+)/u', $raw, $matches);
+
+        $terms = [];
+        foreach ($matches[1] as $key => $phrase) {
+            if ($phrase !== '') {
+                // Quoted literal phrase: trim and normalize internal whitespace
+                $phrase = trim(preg_replace('/\s+/u', ' ', $phrase));
+                if ($phrase !== '') {
+                    $terms[] = $phrase;
+                }
+            } elseif ($matches[2][$key] !== '') {
+                // Explicit /pattern/flags regex
+                $pattern = '/' . trim($matches[2][$key]) . '/' . $matches[3][$key];
+                $terms[] = $pattern;
+            } else {
+                // Loose word (may contain wildcards like imp*laser)
+                $term = trim($matches[4][$key]);
+                // Strip any residual quotes from loose words
+                $term = trim($term, "\"'\xC2\xAB\xC2\xBB");
+                if ($term !== '') {
+                    $terms[] = $term;
+                }
+            }
+        }
+
+        return array_values(array_unique($terms));
+    }
+
+    /**
+     * Checks if a term is a regular expression or wildcard pattern.
+     *
+     * @param string $term
+     * @return bool
+     */
+    public static function isRegexOrWildcard($term)
+    {
+        if ($term === '' || $term === null) {
+            return false;
+        }
+
+        // Explicit regex: /pattern/ or /pattern/i
+        if (preg_match('/^\/.+\/[a-z]*$/iu', $term)) {
+            return true;
+        }
+
+        // Explicit regex prefix: regex:pattern
+        if (stripos($term, 'regex:') === 0) {
+            return true;
+        }
+
+        // Wildcards: * or ? (e.g. imp*laser, serv*, *switch*)
+        if (str_contains($term, '*') || str_contains($term, '?')) {
+            return true;
+        }
+
+        // Regex metacharacters: ^, $, +, |, [, ], {, }, \d, \w, \s
+        if (preg_match('/[\^$+|\\[\\]{}]|\\\\[dwsDWS]/u', $term)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Compiles a term or wildcard pattern into a valid MySQL REGEXP pattern.
+     *
+     * @param string $term
+     * @return string
+     */
+    public static function buildRegexPattern($term)
+    {
+        // Strip regex: prefix if present
+        if (stripos($term, 'regex:') === 0) {
+            $term = substr($term, 6);
+        }
+
+        // Explicit regex wrapped in /.../flags
+        if (preg_match('/^\/(.+)\/([a-z]*)$/iu', $term, $m)) {
+            $pattern = $m[1];
+            if (@preg_match('/' . str_replace('/', '\/', $pattern) . '/u', '') !== false) {
+                return $pattern;
+            }
+        }
+
+        // If it's a wildcard pattern or mixed pattern:
+        // Convert * -> .* (unless already .*) and ? -> .
+        $pattern = '';
+        $chars = preg_split('//u', $term, -1, PREG_SPLIT_NO_EMPTY);
+        $count = count($chars);
+
+        for ($i = 0; $i < $count; $i++) {
+            $c = $chars[$i];
+            if ($c === '*') {
+                // If preceded by a dot '.', keep '*' (it's already '.*')
+                if ($i > 0 && $chars[$i - 1] === '.') {
+                    $pattern .= '*';
+                } else {
+                    $pattern .= '.*';
+                }
+            } elseif ($c === '?') {
+                if ($i > 0 && $chars[$i - 1] === '\\') {
+                    $pattern .= '\\?';
+                } else {
+                    $pattern .= '.';
+                }
+            } elseif (in_array($c, ['^', '$', '.', '+', '|', '(', ')', '[', ']', '{', '}', '\\', '-'], true)) {
+                $pattern .= $c;
+            } else {
+                $pattern .= preg_quote($c, '/');
+            }
+        }
+
+        // Collapse multiple consecutive '.*.*' into '.*'
+        $pattern = preg_replace('/(\.\*)+/u', '.*', $pattern);
+
+        // Validate pattern in PHP; if invalid, safely escape the whole term
+        if (@preg_match('/' . str_replace('/', '\/', $pattern) . '/u', '') === false) {
+            return preg_quote($term, '/');
+        }
+
+        return $pattern;
+    }
+
+    /**
+     * Checks if the query has valid search terms.
+     *
+     * @return bool
+     */
+    public function hasSearchTerms()
+    {
+        if ($this->id_only) {
+            return true;
+        }
+
+        if (is_numeric($this->raw_query)) {
+            return true;
+        }
+
+        $terms = self::extractTerms($this->raw_query);
+        if (empty($terms)) {
+            return false;
+        }
+
+        $effectiveLength = 0;
+        foreach ($terms as $term) {
+            $clean = preg_replace('/[*?\/]/u', '', $term);
+            $effectiveLength += mb_strlen($clean);
+        }
+
+        return $effectiveLength >= 2;
+    }
+
+    /**
+     * Generates search criteria for given fields.
+     * Supports literal phrases, wildcards (*, ?) and regular expressions.
      *
      * @param array $fields Array of field names (e.g. ['name', 'content'])
      * @return array Array compatible with DBmysqlIterator WHERE
      */
     private function getMultiWordCriteria(array $fields)
     {
-        // Regex to find "literal phrases" or loose words.
-        // Captures content between quotes in the first group or words without quotes in the second.
-        preg_match_all('/"([^"]+)"|(\S+)/', $this->raw_query, $matches);
-
-        $terms = [];
-        foreach ($matches[1] as $key => $phrase) {
-            if ($phrase !== '') {
-                // It's a phrase in quotes
-                $terms[] = $phrase;
-            } else {
-                // It's a loose word (or a poorly closed quote)
-                $term = $matches[2][$key];
-                if ($term !== '') {
-                    // If the term is just a quote ("), we ignore it to avoid LIKE '%%%'
-                    if ($term !== '"') {
-                        $terms[] = $term;
-                    }
-                }
-            }
-        }
+        $terms = self::extractTerms($this->raw_query);
 
         if (empty($terms)) {
             return [];
@@ -194,17 +384,43 @@ class PluginGlobalsearchSearchEngine
         $and_criteria = [];
 
         foreach ($terms as $term) {
-            // Each term (word or phrase) must be found in ONE of the fields (OR)
             $or_criteria = [];
-            foreach ($fields as $field) {
-                $or_criteria[$field] = ['LIKE', '%' . $term . '%'];
+
+            if (self::isRegexOrWildcard($term)) {
+                $regex_pattern = self::buildRegexPattern($term);
+                foreach ($fields as $field) {
+                    $or_criteria[] = [$field => ['REGEXP', $regex_pattern]];
+
+                    // Rich text HTML fields in GLPI often store spaces as &nbsp;
+                    if (str_contains($regex_pattern, ' ') && (
+                        str_contains($field, 'content') ||
+                        str_contains($field, 'comment') ||
+                        str_contains($field, 'description')
+                    )) {
+                        $nbsp_pattern = str_replace(' ', '( |&nbsp;)', $regex_pattern);
+                        $or_criteria[] = [$field => ['REGEXP', $nbsp_pattern]];
+                    }
+                }
+            } else {
+                $escaped_term = addcslashes($term, '%_');
+                foreach ($fields as $field) {
+                    $or_criteria[] = [$field => ['LIKE', '%' . $escaped_term . '%']];
+
+                    // Rich text HTML fields in GLPI often store spaces as &nbsp;
+                    if (str_contains($term, ' ') && (
+                        str_contains($field, 'content') ||
+                        str_contains($field, 'comment') ||
+                        str_contains($field, 'description')
+                    )) {
+                        $nbsp_term = addcslashes(str_replace(' ', '&nbsp;', $term), '%_');
+                        $or_criteria[] = [$field => ['LIKE', '%' . $nbsp_term . '%']];
+                    }
+                }
             }
-            // We add this OR block to the main AND block
+
             $and_criteria[] = ['OR' => $or_criteria];
         }
 
-        // If there is only one term, we return the OR directly to flatten the SQL.
-        // If there are several, we wrap them in an AND.
         return (count($and_criteria) === 1) ? $and_criteria[0] : ['AND' => $and_criteria];
     }
 
@@ -306,6 +522,10 @@ class PluginGlobalsearchSearchEngine
             return [];
         }
 
+        if (!$this->hasSearchTerms()) {
+            return [];
+        }
+
         // Get entity restrictions using standard GLPI methods
         $entity_criteria = $this->getEntityRestrictCriteria('Ticket', 'glpi_tickets');
 
@@ -321,9 +541,11 @@ class PluginGlobalsearchSearchEngine
                 $id_criteria = ['glpi_tickets.id' => $this->raw_query];
                 $content_criteria = $this->getMultiWordCriteria($search_fields);
                 $main_criteria = !empty($content_criteria) ? ['OR' => [$id_criteria, $content_criteria]] : $id_criteria;
-            } elseif (mb_strlen($this->raw_query) >= 3) {
-                $main_criteria = $this->getMultiWordCriteria($search_fields);
             } else {
+                $main_criteria = $this->getMultiWordCriteria($search_fields);
+            }
+
+            if (empty($main_criteria)) {
                 return [];
             }
 
@@ -499,6 +721,10 @@ class PluginGlobalsearchSearchEngine
             return [];
         }
 
+        if (!$this->hasSearchTerms()) {
+            return [];
+        }
+
         $entity_criteria = $this->getEntityRestrictCriteria('Change', 'glpi_changes');
 
         $search_fields = ['glpi_changes.name', 'glpi_changes.content'];
@@ -511,9 +737,11 @@ class PluginGlobalsearchSearchEngine
                 $id_criteria = ['glpi_changes.id' => $this->raw_query];
                 $content_criteria = $this->getMultiWordCriteria($search_fields);
                 $main_criteria = !empty($content_criteria) ? ['OR' => [$id_criteria, $content_criteria]] : $id_criteria;
-            } elseif (mb_strlen($this->raw_query) >= 3) {
-                $main_criteria = $this->getMultiWordCriteria($search_fields);
             } else {
+                $main_criteria = $this->getMultiWordCriteria($search_fields);
+            }
+
+            if (empty($main_criteria)) {
                 return [];
             }
 
@@ -647,6 +875,10 @@ class PluginGlobalsearchSearchEngine
             return [];
         }
 
+        if (!$this->hasSearchTerms()) {
+            return [];
+        }
+
         // Get entity restrictions using standard GLPI methods
         $entity_criteria = $this->getEntityRestrictCriteria('Project', 'glpi_projects');
 
@@ -660,9 +892,11 @@ class PluginGlobalsearchSearchEngine
                 $id_criteria = ['glpi_projects.id' => $this->raw_query];
                 $content_criteria = $this->getMultiWordCriteria($search_fields);
                 $main_criteria = !empty($content_criteria) ? ['OR' => [$id_criteria, $content_criteria]] : $id_criteria;
-            } elseif (mb_strlen($this->raw_query) >= 3) {
-                $main_criteria = $this->getMultiWordCriteria($search_fields);
             } else {
+                $main_criteria = $this->getMultiWordCriteria($search_fields);
+            }
+
+            if (empty($main_criteria)) {
                 return [];
             }
 
@@ -740,6 +974,10 @@ class PluginGlobalsearchSearchEngine
             return [];
         }
 
+        if (!$this->hasSearchTerms()) {
+            return [];
+        }
+
         // Get entity restrictions using standard GLPI methods
         $entity_criteria = $this->getEntityRestrictCriteria('Document', 'glpi_documents');
 
@@ -769,11 +1007,10 @@ class PluginGlobalsearchSearchEngine
                 }
             }
         } else {
-            if (mb_strlen($this->raw_query) < 3) {
+            $where = $this->getMultiWordCriteria($search_fields);
+            if (empty($where)) {
                 return [];
             }
-
-            $where = $this->getMultiWordCriteria($search_fields);
         }
 
         // Enhanced search: match documents if any of their notes match the criteria
@@ -840,6 +1077,10 @@ class PluginGlobalsearchSearchEngine
             return [];
         }
 
+        if (!$this->hasSearchTerms()) {
+            return [];
+        }
+
         // Get entity restrictions using standard GLPI methods
         $entity_criteria = $this->getEntityRestrictCriteria('Software', 'glpi_softwares');
 
@@ -869,11 +1110,10 @@ class PluginGlobalsearchSearchEngine
                 }
             }
         } else {
-            if (mb_strlen($this->raw_query) < 3) {
+            $where = $this->getMultiWordCriteria($search_fields);
+            if (empty($where)) {
                 return [];
             }
-
-            $where = $this->getMultiWordCriteria($search_fields);
         }
 
         $criteria = [
@@ -919,6 +1159,10 @@ class PluginGlobalsearchSearchEngine
             return [];
         }
 
+        if (!$this->hasSearchTerms()) {
+            return [];
+        }
+
         // Users don't have direct entity restrictions like other items
         // but we must verify view permissions
 
@@ -948,11 +1192,10 @@ class PluginGlobalsearchSearchEngine
                 }
             }
         } else {
-            if (mb_strlen($this->raw_query) < 3) {
+            $where = $this->getMultiWordCriteria($search_fields);
+            if (empty($where)) {
                 return [];
             }
-
-            $where = $this->getMultiWordCriteria($search_fields);
         }
 
         $criteria = [
@@ -998,11 +1241,11 @@ class PluginGlobalsearchSearchEngine
     {
         global $DB;
 
-        if (mb_strlen($this->raw_query) < 1) {
+        if (!TicketTask::canView()) {
             return [];
         }
 
-        if (!TicketTask::canView()) {
+        if (!$this->hasSearchTerms()) {
             return [];
         }
 
@@ -1011,9 +1254,6 @@ class PluginGlobalsearchSearchEngine
 
         // Fields to search in
         $search_fields = ['glpi_tickettasks.content'];
-
-        // Build content search criteria
-        $content_criteria = $this->getMultiWordCriteria($search_fields);
 
         // If numeric, also search by task ID or ticket ID
         if (is_numeric($this->raw_query)) {
@@ -1027,13 +1267,14 @@ class PluginGlobalsearchSearchEngine
             if ($this->id_only) {
                 $where_criteria = $id_criteria;
             } else {
+                $content_criteria = $this->getMultiWordCriteria($search_fields);
                 $where_criteria = !empty($content_criteria) ? ['OR' => [$content_criteria, $id_criteria]] : $id_criteria;
             }
         } else {
-            if (mb_strlen($this->raw_query) < 3) {
+            $where_criteria = $this->getMultiWordCriteria($search_fields);
+            if (empty($where_criteria)) {
                 return [];
             }
-            $where_criteria = $content_criteria;
         }
 
         // Apply permission restrictions for private tasks
@@ -1149,6 +1390,10 @@ class PluginGlobalsearchSearchEngine
             return [];
         }
 
+        if (!$this->hasSearchTerms()) {
+            return [];
+        }
+
         // Get entity restrictions using standard GLPI methods
         $entity_criteria = $this->getEntityRestrictCriteria('ProjectTask', 'glpi_projecttasks');
 
@@ -1180,11 +1425,10 @@ class PluginGlobalsearchSearchEngine
                 }
             }
         } else {
-            if (mb_strlen($this->raw_query) < 3) {
+            $where = $this->getMultiWordCriteria($search_fields);
+            if (empty($where)) {
                 return [];
             }
-
-            $where = $this->getMultiWordCriteria($search_fields);
         }
 
         $select = [

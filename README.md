@@ -11,6 +11,9 @@ A lightweight GLPI plugin that enhances the **Global Search** by replacing the d
 ## ✨ Features
 
 * 🔹 Multi-word "Google-style" search functionality
+* 🔹 Wildcard search (`*` and `?`) for legacy system compatibility (e.g. Track-It! users)
+* 🔹 Regular expression search support (`/pattern/` or inline regex patterns)
+* 🔹 Exact literal phrases with quotes (`"phrase"` or `'phrase'`)
 * 🔹 Search in closed tickets and resolved projects
 * 🔹 Configurable search types via admin panel
 * 🔹 Search across 8 different item types:
@@ -65,7 +68,14 @@ Available options:
 ### Search
 
 * **Multi-word search**: "Google-style" logic - all words must appear in results.
-* **Literal phrases**: Use double quotes (e.g., `"router cisco"`) to search for exact text matches.
+* **Wildcards (`*` and `?`)**:
+    * Familiar wildcard behavior for technicians accustomed to legacy systems like Track-It!.
+    * Use `*` to match zero or more characters (e.g., `imp*laser` matches "impresora multifunción laser", `serv*` matches "servidor" and "servidores", `*switch*` matches anything containing "switch").
+    * Use `?` to match a single character (e.g., `pc-?01` matches "pc-101" and "pc-201").
+* **Regular Expressions**:
+    * Search with explicit regular expressions enclosed in slashes (e.g., `/sw-[0-9]+/i`) or standard regex patterns (`regex:pattern`, `^[0-9]+-srv`).
+    * Built-in syntax validation ensures safe execution without throwing SQL errors on invalid patterns.
+* **Literal phrases**: Use quotes (e.g., `"router cisco"` or `'servidor web'`) to search for exact text matches, handling typographical and curly quotes automatically.
 * **Smart ID search**:
     * Numeric queries find both IDs and content (e.g., `5457` finds ID 5457 and items containing "5457").
     * Use the `#` prefix (e.g., `#123`) to force a search **only by ID**, which is faster and more precise.

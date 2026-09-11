@@ -165,8 +165,14 @@ msgstr "Cerrar"
 msgid "Search tickets, projects (min. 3 characters)..."
 msgstr "Buscar tickets, proyectos (mín. 3 caracteres)..."
 
+msgid "Search tickets, projects (min. 2 characters)..."
+msgstr "Buscar tickets, proyectos (mín. 2 caracteres)..."
+
 msgid "Search by ID (e.g. #123), exact phrases (e.g. \"web server\") or individual words."
 msgstr "Busca por ID (ej: #123), frases exactas (ej: \"servidor web\") o palabras sueltas."
+
+msgid "Search by ID (#123), phrases (\"web server\"), wildcards (imp*laser) or regex (/sw-[0-9]+/)."
+msgstr "Busca por ID (#123), frases (\"servidor web\"), comodines (imp*laser) o regex (/sw-[0-9]+/)."
 
 msgid "Searching…"
 msgstr "Buscando…"

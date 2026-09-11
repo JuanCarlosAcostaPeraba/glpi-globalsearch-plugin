@@ -861,14 +861,160 @@
     }
 
     /**
+     * Extracts search terms from raw query string.
+     * Supports literal phrases in double/single/typographical quotes,
+     * handles unbalanced/unclosed quotes, extra whitespace, etc.
+     */
+    function extractSearchTerms(searchQuery) {
+        if (!searchQuery || !searchQuery.trim()) return [];
+
+        let raw = searchQuery.trim();
+
+        // Support for prefix "#123" => extract ID without #
+        if (raw.startsWith('#')) {
+            const idOnly = raw.substring(1).trim().replace(/^["']+|["']+$/g, '');
+            if (/^\d+$/.test(idOnly)) {
+                return [idOnly];
+            }
+        }
+
+        // Normalize unicode quotation marks:
+        // Double: “ (U+201C), ” (U+201D), „ (U+201E), « (U+00AB), » (U+00BB)
+        raw = raw.replace(/[\u201C\u201D\u201E\u00AB\u00BB]/g, '"');
+
+        // Single: ‘ (U+2018), ’ (U+2019), ‚ (U+201A)
+        raw = raw.replace(/[\u2018\u2019\u201A]/g, "'");
+
+        // Convert single-quoted phrases to double-quoted phrases (excluding contractions)
+        raw = raw.replace(/(?<!\p{L})'([^']+)'(?!\p{L})/gu, '"$1"');
+
+        // Handle unbalanced double quotes
+        const quoteCount = (raw.match(/"/g) || []).length;
+        if (quoteCount % 2 !== 0) {
+            const firstQuotePos = raw.indexOf('"');
+            const lastQuotePos = raw.lastIndexOf('"');
+            if (firstQuotePos === lastQuotePos) {
+                if (firstQuotePos === 0 || /\s$/.test(raw.substring(0, firstQuotePos))) {
+                    raw += '"';
+                } else if (lastQuotePos === raw.length - 1) {
+                    raw = raw.substring(0, raw.length - 1);
+                } else {
+                    raw = raw.substring(0, lastQuotePos) + raw.substring(lastQuotePos + 1);
+                }
+            } else {
+                raw += '"';
+            }
+        }
+
+        const regex = /"([^"]+)"|(?<=^|\s)\/([^\/]+)\/([a-z]*)(?=$|\s)|(\S+)/g;
+        const terms = [];
+        let match;
+
+        while ((match = regex.exec(raw)) !== null) {
+            if (match[1] !== undefined && match[1] !== '') {
+                const phrase = match[1].trim().replace(/\s+/g, ' ');
+                if (phrase) {
+                    terms.push(phrase);
+                }
+            } else if (match[2] !== undefined && match[2] !== '') {
+                const pattern = '/' + match[2].trim() + '/' + (match[3] || '');
+                terms.push(pattern);
+            } else if (match[4] !== undefined && match[4] !== '') {
+                const word = match[4].replace(/^["']+|["']+$/g, '').trim();
+                if (word) {
+                    terms.push(word);
+                }
+            }
+        }
+
+        // Sort by length descending so longer phrases match first in regex
+        return Array.from(new Set(terms)).sort((a, b) => b.length - a.length);
+    }
+
+    /**
+     * Checks if a term is a regular expression or wildcard pattern
+     */
+    function isRegexOrWildcard(term) {
+        if (!term) return false;
+        if (/^\/.+\/[a-z]*$/i.test(term)) return true;
+        if (term.toLowerCase().startsWith('regex:')) return true;
+        if (term.includes('*') || term.includes('?')) return true;
+        if (/[\^$+|\\[\\]{}]|\\[dwsDWS]/.test(term)) return true;
+        return false;
+    }
+
+    /**
+     * Builds a safe RegExp pattern from a search term (handles regex, wildcards and literals)
+     */
+    function buildTermRegex(term) {
+        if (term.toLowerCase().startsWith('regex:')) {
+            term = term.substring(6);
+        }
+        const slashMatch = term.match(/^\/(.+)\/([a-z]*)$/i);
+        if (slashMatch) {
+            try {
+                new RegExp(slashMatch[1], 'gi');
+                return slashMatch[1];
+            } catch (e) {
+                // fallback to literal
+            }
+        }
+
+        if (isRegexOrWildcard(term)) {
+            // For wildcards: trim leading * so it doesn't match the entire line before the word
+            let t = term.replace(/^\*+/, '');
+            let trailingStar = false;
+            if (t.endsWith('*') && !t.endsWith('.*')) {
+                trailingStar = true;
+                t = t.replace(/\*+$/, '');
+            }
+
+            let pattern = '';
+            const chars = Array.from(t);
+            for (let i = 0; i < chars.length; i++) {
+                const c = chars[i];
+                if (c === '*') {
+                    if (i > 0 && chars[i - 1] === '.') {
+                        pattern += '*?';
+                    } else {
+                        pattern += '.*?';
+                    }
+                } else if (c === '?') {
+                    pattern += '.';
+                } else if (['^', '$', '.', '+', '|', '(', ')', '[', ']', '{', '}', '\\', '-'].includes(c)) {
+                    pattern += c;
+                } else {
+                    pattern += c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                }
+            }
+            pattern = pattern.replace(/(\.\*\?)+/g, '.*?');
+            if (trailingStar) {
+                pattern += '\\w*';
+            }
+
+            try {
+                new RegExp(pattern, 'gi');
+                return pattern;
+            } catch (e) {
+                // fallback to literal
+            }
+        }
+
+        return escapeRegex(term);
+    }
+
+    /**
      * Highlight search terms while preserving HTML links
      */
     function applyHighlight(table) {
         const searchQuery = getSearchQuery();
         if (!searchQuery) return;
 
-        const terms = searchQuery.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+        const terms = extractSearchTerms(searchQuery);
         if (terms.length === 0) return;
+
+        const regexPatterns = terms.map(buildTermRegex).filter(Boolean);
+        if (regexPatterns.length === 0) return;
 
         const tbody = table.querySelector('tbody');
         if (!tbody) return;
@@ -895,7 +1041,7 @@
                 function highlightTextNodes(node) {
                     if (node.nodeType === Node.TEXT_NODE) {
                         // It is a text node, apply highlighting
-                        const regex = new RegExp(`(${terms.map(escapeRegex).join('|')})`, 'gi');
+                        const regex = new RegExp(`(${regexPatterns.join('|')})`, 'gi');
                         const parts = node.textContent.split(regex);
 
                         if (parts.length > 1) {
@@ -940,10 +1086,10 @@
     }
 
     /**
-     * Escape special characters for regex
+     * Escape special characters for regex (and match non-breaking spaces)
      */
     function escapeRegex(str) {
-        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '[ \\u00A0]+');
     }
 
     /**

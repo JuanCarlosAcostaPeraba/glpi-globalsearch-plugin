@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             <input type="text"
                                    name="globalsearch"
                                    class="form-control form-control-lg"
-                                   placeholder="${L.placeholder || 'Search tickets, projects (min. 3 characters)...'}"
+                                   placeholder="${L.placeholder || 'Search tickets, projects (min. 2 characters)...'}"
                                    autocomplete="off"
                                    autofocus />
                         </div>
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="mb-3">
                         <div class="text-muted">
                             <i class="ti ti-info-circle me-1"></i>
-                            ${L.help_text || 'Search by ID (e.g. #123), exact phrases (e.g. "web server") or individual words.'}
+                            ${L.help_text || 'Search by ID (#123), phrases ("web server"), wildcards (imp*laser) or regex (/sw-[0-9]+/).'}
                         </div>
                     </div>
                     <div class="d-flex justify-content-end align-items-center gap-2">
@@ -106,6 +106,13 @@ document.addEventListener('DOMContentLoaded', function () {
         setTimeout(() => {
             const input = modal.querySelector('input[name="globalsearch"]');
             if (input) {
+                if (!input.value) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const currentQuery = urlParams.get('globalsearch');
+                    if (currentQuery) {
+                        input.value = currentQuery;
+                    }
+                }
                 input.focus();
                 input.select();
             }
